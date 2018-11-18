@@ -50,7 +50,10 @@ def video2tensor(video_path):
         # transform data using (mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])]) 
         frames.append(np.array([(norm_rgb[:,:,0]-0.485)/0.229, (norm_rgb[:,:,1]-0.456)/0.224, (norm_rgb[:,:,2]-0.406)/0.225]))
     
-    frames_var = Variable(torch.tensor(frames)) # assign it to a variable
+    # assign it to a variable
+    # frames_var = Variable(torch.tensor(frames)) # works with torch 0.4
+    frames_var = Variable(torch.FloatTensor(np.array(frames).astype(np.float64))) # works with torch 0.3.1
+
     return frames_var
 
 def extract_feature_resnet(resnet152, video_path):
@@ -61,19 +64,28 @@ def extract_feature_resnet(resnet152, video_path):
 	
 
 ## Main program
+def main():
+    # load pre-trained model
+    model = create_resnet()
 
-# load pre-trained model
-model = create_resnet()
+    # load video id from caption file
+    video_ids = load_caps(VIDEO_CAPS)
 
-# load video id from caption file
-video_ids = load_caps(VIDEO_CAPS)
-
-# extract feature for each video which is a batch of frames
-for video_id in video_ids:
-    video_path = DATA_NAME+'/'+video_id
-    if os.path.isfile(video_path):
-        feature = extract_feature_resnet(model, video_path)
-        # mean pooling
-        feature_mean = torch.mean(feature, dim=0)
-        np.save(DATA_FEAT+"/"+video_id[:-4]+'.npy', feature_mean.data.numpy().reshape(FEAT_DIM))
-    
+    # extract feature for each video which is a batch of frames
+    print("Starting to process...")
+    count = 1
+    n = len(video_ids)
+    for video_id in video_ids:
+        video_path = DATA_NAME+'/'+video_id
+        if os.path.isfile(video_path):
+            count = count+1
+            feature = extract_feature_resnet(model, video_path)
+            # mean pooling
+            feature_mean = torch.mean(feature, dim=0)
+            np.save(DATA_FEAT+"/"+video_id[:-4]+'.npy', feature_mean.numpy().reshape(FEAT_DIM))
+            if (count % 2 == 0):
+                print("Processing: " + str(count) + "/" + str(n))
+    print("Finished")
+	
+if __name__ == '__main__':
+    main()
