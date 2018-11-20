@@ -102,13 +102,7 @@ def _read_video_caps():
         filenames = np_data[:,0]
         filenames = np.unique(filenames)
 
-    # filenames = np.array(['_UqnTFs1BLc_23_27.avi', 
-    #                    '3zgEl-OLFKE_12_15.avi',
-    #                   '5L5MoemWC6g_10_13.avi', '-7KMZQEsJW4_205_208.avi',
-    #                   'BgoOihBb78w_38_40.avi', 'GWQTAe64m-0_91_94.avi',
-    #                   'nTasT5h0LEg_12_14.avi', 'QT8iCDc7NGU_18_23.avi',
-    #                   'SaOqf2d-y30_22_27.avi', 'UnWgz-mVMXU_2_6.avi'
-    #                   ])
+    filenames = np.array([f for f in filenames if path.isfile(path.join(_VIDEO_DIR, f))])
 
     return filenames
 
