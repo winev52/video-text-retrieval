@@ -3,6 +3,7 @@ kinetics-i3d-sample/
 YouTubeClips/
 *.npy
 .vscode/
+*.out
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

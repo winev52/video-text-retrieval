@@ -7,7 +7,7 @@ import tensorflow as tf
 
 import i3d
 
-_BATCH_SIZE = 8
+_BATCH_SIZE = 32 
 _IMAGE_SIZE = 224
 _VIDEO_FRAMES = 64
 _VIDEO_DIR = '../../data/10vid'
@@ -102,7 +102,7 @@ def _read_video_caps():
         filenames = np_data[:,0]
         filenames = np.unique(filenames)
 
-    filenames = np.array([f for f in filenames if path.isfile(path.join(_VIDEO_DIR, f))])
+    filenames = np.array([f for f in filenames if path.isfile(path.join(_FLAGS.video_dir, f))])
 
     return filenames
 
