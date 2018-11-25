@@ -35,7 +35,6 @@ def main(unused_args):
     model_name = _FLAGS.model
     output_dir = _FLAGS.output_dir
     is_opticalflow = model_name in ['flow', 'flow_imagenet']
-    print(output_dir)
 
     # get available video names
     file_names = _read_video_caps()
