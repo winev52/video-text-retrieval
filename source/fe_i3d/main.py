@@ -12,7 +12,7 @@ _IMAGE_SIZE = 224
 _VIDEO_FRAMES = 64
 _VIDEO_DIR = '../../data/10vid'
 _CAPS_PATH = '../../data/msvd_video_caps.pkl'
-_OUTPUT_DIR = '../../data/rbg_i3d'
+_OUTPUT_DIR = '../../data/rgb_i3d'
 _LABEL_MAP_PATH = 'data/label_map.txt'
 _LABEL_MAP_PATH_600 = 'data/label_map_600.txt'
 

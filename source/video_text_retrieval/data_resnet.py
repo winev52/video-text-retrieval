@@ -1,13 +1,12 @@
 import torch
 import torch.utils.data as data
-import torchvision.transforms as transforms
-import os
-import nltk
-from PIL import Image
-from pycocotools.coco import COCO
 import numpy as np
-import json as jsonmod
-import pickle
+import os
+# import torchvision.transforms as transforms
+# import nltk
+# from PIL import Image
+# import json as jsonmod
+# import pickle
 
 
 class VTTDataset(data.Dataset):
