@@ -37,20 +37,20 @@ def main(unused_args):
     is_opticalflow = model_name in ['flow', 'flow_imagenet']
 
     # get available video names
-    file_names = _read_video_caps()
+    video_ids = _get_video_ids()
     features, video_ids, iterator, file_names_placeholder, variable_map = \
-        _get_flow_model(model_name, file_names) if is_opticalflow else _get_RBG_model(model_name, file_names)
+        _get_flow_model(model_name, video_ids) if is_opticalflow else _get_RBG_model(model_name, video_ids)
 
     rgb_saver = tf.train.Saver(var_list=variable_map, reshape=True)
 
     # starting session
-    n_files = len(file_names)
+    n_files = len(video_ids)
     n_processed = 0
     with tf.Session() as sess:
         rgb_saver.restore(sess, _CHECKPOINT_PATHS[model_name])
         tf.logging.info('checkpoint restored')
         
-        sess.run(iterator.initializer, feed_dict={file_names_placeholder: file_names})    
+        sess.run(iterator.initializer, feed_dict={file_names_placeholder: video_ids})    
         while True:
             try:
                 out_features, out_ids = sess.run([features, video_ids])
@@ -66,20 +66,20 @@ def main(unused_args):
             tf.logging.info("--> {0}".format(b', '.join(out_ids)))
 
 
-def _get_RBG_model(model_name, file_names):
+def _get_RBG_model(model_name, video_ids):
     tf.reset_default_graph()
 
     # setup dataset
-    file_names_placeholder = tf.placeholder(file_names.dtype, file_names.shape)
+    file_names_placeholder = tf.placeholder(video_ids.dtype, video_ids.shape)
     dataset = tf.data.Dataset.from_tensor_slices(file_names_placeholder)
     # preprocessing by loading video
-    dataset = dataset.map(lambda filename: tuple(tf.py_func(_read_video_function, 
+    dataset = dataset.map(lambda filename: tuple(tf.py_func(_read_rgb_function, 
                                                     [filename],
                                                     [tf.float32, filename.dtype])))
     # batching up and get the iterator
     dataset = dataset.batch(_BATCH_SIZE)
     iterator = dataset.make_initializable_iterator()
-    rgb_input, video_ids = iterator.get_next()
+    rgb_input, vid = iterator.get_next()
     # set shape of the input
     rgb_input.set_shape([_BATCH_SIZE, _VIDEO_FRAMES, _IMAGE_SIZE, _IMAGE_SIZE, 3])
 
@@ -101,13 +101,13 @@ def _get_RBG_model(model_name, file_names):
             else:
                 variable_map[variable.name.replace(':0', '')] = variable
 
-    return rgb_features, video_ids, iterator, file_names_placeholder, variable_map
+    return rgb_features, vid, iterator, file_names_placeholder, variable_map
 
-def _get_flow_model(model_name, file_names):
+def _get_flow_model(model_name, video_ids):
     tf.reset_default_graph()
 
     # setup dataset
-    file_names_placeholder = tf.placeholder(file_names.dtype, file_names.shape)
+    file_names_placeholder = tf.placeholder(video_ids.dtype, video_ids.shape)
     dataset = tf.data.Dataset.from_tensor_slices(file_names_placeholder)
     # preprocessing by loading video
     dataset = dataset.map(lambda filename: tuple(tf.py_func(_read_opticalflow_function, 
@@ -116,7 +116,7 @@ def _get_flow_model(model_name, file_names):
     # batching up and get the iterator
     dataset = dataset.batch(_BATCH_SIZE)
     iterator = dataset.make_initializable_iterator()
-    flow_input, video_ids = iterator.get_next()
+    flow_input, vid = iterator.get_next()
     # set shape of the input
     flow_input.set_shape([_BATCH_SIZE, _VIDEO_FRAMES, _IMAGE_SIZE, _IMAGE_SIZE, 2])
 
@@ -135,17 +135,17 @@ def _get_flow_model(model_name, file_names):
         if variable.name.split('/')[0] == 'Flow':
             variable_map[variable.name.replace(':0', '')] = variable
 
-    return flow_features, video_ids, iterator, file_names_placeholder, variable_map
+    return flow_features, vid, iterator, file_names_placeholder, variable_map
 
-def _read_video_caps():
+def _get_video_ids():
     with open(_CAPS_PATH, 'rb') as f:
         np_data = pickle.load(f)
-        filenames = np_data[:,0]
-        filenames = np.unique(filenames)
+        video_ids = np_data[:,0]
+        video_ids = np.unique(video_ids)
 
-    filenames = np.array([f for f in filenames if path.isfile(path.join(_FLAGS.video_dir, f))])
+    video_ids = np.array([vid for vid in video_ids if path.isfile(path.join(_FLAGS.video_dir, vid, ".avi"))])
 
-    return filenames
+    return video_ids
 
 def _transform_frame_rgb(bgr_frame):
     rgb_frame = cv2.cvtColor(bgr_frame, cv2.COLOR_BGR2RGB)
@@ -156,13 +156,13 @@ def _transform_frame_rgb(bgr_frame):
     # norm_rgb = (norm_rgb - [0.485, 0.456, 0.406]) / [0.229, 0.224, 0.225]
     return norm_rgb
 
-def _read_video_function(filename):
-    filename = filename.decode()
-    file_path = path.join(_FLAGS.video_dir, filename)
+def _read_rgb_function(video_id):
+    video_id = video_id.decode()
+    file_path = path.join(_FLAGS.video_dir, video_id, ".avi")
     frames = list()
 
     cap = cv2.VideoCapture(file_path)
-    assert cap.isOpened(), 'Cannot open file {0}'.format(filename)
+    assert cap.isOpened(), 'Cannot open file {0}'.format(video_id)
 
     # get total frames
     total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
@@ -191,7 +191,7 @@ def _read_video_function(filename):
 
     cap.release()
         
-    return np.array(frames, dtype=np.float32), filename[:-4]
+    return np.array(frames, dtype=np.float32), video_id
 
 def _transform_frame_flow(bgr_frame):
     gray_frame = cv2.cvtColor(bgr_frame, cv2.COLOR_BGR2GRAY)
@@ -210,14 +210,14 @@ def _clip_normalize_flow(np_arr):
     norm_frame = clipped_arr / 20.0
     return norm_frame
 
-def _read_opticalflow_function(filename):
-    filename = filename.decode()
+def _read_opticalflow_function(video_id):
+    video_id = video_id.decode()
     # print(filename)
-    file_path = path.join(_FLAGS.video_dir, filename)
+    file_path = path.join(_FLAGS.video_dir, video_id, ".avi")
     flows = list()
 
     cap = cv2.VideoCapture(file_path)
-    assert cap.isOpened(), 'Cannot open file {0}'.format(filename)
+    assert cap.isOpened(), 'Cannot open file {0}'.format(video_id)
 
     # get total frames
     total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
@@ -265,7 +265,7 @@ def _read_opticalflow_function(filename):
 
     cap.release()
 
-    return np.array(flows, dtype=np.float32), filename[:-4]
+    return np.array(flows, dtype=np.float32), video_id
 
 if __name__ == "__main__":
     tf.app.run(main)
