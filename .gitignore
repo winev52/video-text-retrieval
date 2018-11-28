@@ -6,6 +6,8 @@ YouTubeClips/
 data-captions/
 YouTubeClips-audio/
 *.npy
+.vscode/
+*.out
 
 
 # Byte-compiled / optimized / DLL files
