@@ -10,9 +10,9 @@ import i3d
 _BATCH_SIZE = 4
 _IMAGE_SIZE = 224
 _VIDEO_FRAMES = 64
-_VIDEO_DIR = '../../data/10vid'
+_IN_DIR = '../../data/10vid'
 _CAPS_PATH = '../../data/msvd_video_caps.pkl'
-_OUTPUT_DIR = '../../data/rgb_i3d'
+_OUT_DIR = '../../data/rgb_i3d'
 _LABEL_MAP_PATH = 'data/label_map.txt'
 _LABEL_MAP_PATH_600 = 'data/label_map_600.txt'
 
@@ -25,40 +25,42 @@ _CHECKPOINT_PATHS = {
 }
 
 tf.flags.DEFINE_string('model', 'rgb_imagenet', 'rgb, rgb600, rgb_imagenet, flow, flow_imagenet')
-tf.flags.DEFINE_string('video_dir', _VIDEO_DIR, 'dir of input videos')
-tf.flags.DEFINE_string('output_dir', _OUTPUT_DIR, 'dir of output features')
+tf.flags.DEFINE_string('in_dir', _IN_DIR, 'dir of input videos')
+tf.flags.DEFINE_string('out_dir', _OUT_DIR, 'dir of output features')
+tf.flags.DEFINE_integer('batch_size', _BATCH_SIZE, 'batch size')
 tf.logging.set_verbosity(tf.logging.INFO)
 _FLAGS = tf.flags.FLAGS
 
 def main(unused_args):
     # get app parameters
     model_name = _FLAGS.model
-    output_dir = _FLAGS.output_dir
+    out_dir = _FLAGS.out_dir
     is_opticalflow = model_name in ['flow', 'flow_imagenet']
 
     # get available video names
     video_ids = _get_video_ids()
-    features, video_ids, iterator, file_names_placeholder, variable_map = \
+    features, in_ids, iterator, video_ids_placeholder, variable_map = \
         _get_flow_model(model_name, video_ids) if is_opticalflow else _get_RBG_model(model_name, video_ids)
 
     rgb_saver = tf.train.Saver(var_list=variable_map, reshape=True)
 
     # starting session
     n_files = len(video_ids)
+    print("total videos: ", n_files)
     n_processed = 0
     with tf.Session() as sess:
         rgb_saver.restore(sess, _CHECKPOINT_PATHS[model_name])
         tf.logging.info('checkpoint restored')
         
-        sess.run(iterator.initializer, feed_dict={file_names_placeholder: video_ids})    
+        sess.run(iterator.initializer, feed_dict={video_ids_placeholder: video_ids})    
         while True:
             try:
-                out_features, out_ids = sess.run([features, video_ids])
+                out_features, out_ids = sess.run([features, in_ids])
             except tf.errors.OutOfRangeError: # when reach end of dataset
                 break
                 
             for i in range(len(out_ids)):
-                np.save(path.join(output_dir, out_ids[i].decode()), out_features[i], allow_pickle=False)
+                np.save(path.join(out_dir, out_ids[i].decode()), out_features[i], allow_pickle=False)
                 
             n_processed += len(out_ids)
             tf.logging.info("{datetime:%Y-%m-%d %H:%M:%S} Processed {n_processed:d}/{n_files:d}".format(
@@ -67,6 +69,11 @@ def main(unused_args):
 
 
 def _get_RBG_model(model_name, video_ids):
+
+    # load parameter
+    batch_size = _FLAGS.batch_size
+
+    # reset graph
     tf.reset_default_graph()
 
     # setup dataset
@@ -77,11 +84,11 @@ def _get_RBG_model(model_name, video_ids):
                                                     [filename],
                                                     [tf.float32, filename.dtype])))
     # batching up and get the iterator
-    dataset = dataset.batch(_BATCH_SIZE)
+    dataset = dataset.batch(batch_size)
     iterator = dataset.make_initializable_iterator()
     rgb_input, vid = iterator.get_next()
     # set shape of the input
-    rgb_input.set_shape([_BATCH_SIZE, _VIDEO_FRAMES, _IMAGE_SIZE, _IMAGE_SIZE, 3])
+    rgb_input.set_shape([batch_size, _VIDEO_FRAMES, _IMAGE_SIZE, _IMAGE_SIZE, 3])
 
     # setup the model
     with tf.variable_scope('RGB'):
@@ -104,6 +111,11 @@ def _get_RBG_model(model_name, video_ids):
     return rgb_features, vid, iterator, file_names_placeholder, variable_map
 
 def _get_flow_model(model_name, video_ids):
+
+    # load parameter
+    batch_size = _FLAGS.batch_size
+
+    # reset graph
     tf.reset_default_graph()
 
     # setup dataset
@@ -114,11 +126,11 @@ def _get_flow_model(model_name, video_ids):
                                                     [filename],
                                                     [tf.float32, filename.dtype])))
     # batching up and get the iterator
-    dataset = dataset.batch(_BATCH_SIZE)
+    dataset = dataset.batch(batch_size)
     iterator = dataset.make_initializable_iterator()
     flow_input, vid = iterator.get_next()
     # set shape of the input
-    flow_input.set_shape([_BATCH_SIZE, _VIDEO_FRAMES, _IMAGE_SIZE, _IMAGE_SIZE, 2])
+    flow_input.set_shape([batch_size, _VIDEO_FRAMES, _IMAGE_SIZE, _IMAGE_SIZE, 2])
 
     # setup the model
     with tf.variable_scope('Flow'):
@@ -143,7 +155,7 @@ def _get_video_ids():
         video_ids = np_data[:,0]
         video_ids = np.unique(video_ids)
 
-    video_ids = np.array([vid for vid in video_ids if path.isfile(path.join(_FLAGS.video_dir, vid, ".avi"))])
+    video_ids = np.array([vid for vid in video_ids if path.isfile(path.join(_FLAGS.in_dir, vid +".avi"))])
 
     return video_ids
 
@@ -158,7 +170,7 @@ def _transform_frame_rgb(bgr_frame):
 
 def _read_rgb_function(video_id):
     video_id = video_id.decode()
-    file_path = path.join(_FLAGS.video_dir, video_id, ".avi")
+    file_path = path.join(_FLAGS.in_dir, video_id + ".avi")
     frames = list()
 
     cap = cv2.VideoCapture(file_path)
@@ -213,7 +225,7 @@ def _clip_normalize_flow(np_arr):
 def _read_opticalflow_function(video_id):
     video_id = video_id.decode()
     # print(filename)
-    file_path = path.join(_FLAGS.video_dir, video_id, ".avi")
+    file_path = path.join(_FLAGS.in_dir, video_id + ".avi")
     flows = list()
 
     cap = cv2.VideoCapture(file_path)
