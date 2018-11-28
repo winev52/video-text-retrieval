@@ -1,6 +1,12 @@
 # custom folder
 kinetics-i3d-sample/
+soundnet/
+10vid-audio/
+YouTubeClips/
+data-captions/
+YouTubeClips-audio/
 *.npy
+
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
