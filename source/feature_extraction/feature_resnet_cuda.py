@@ -13,7 +13,7 @@ DATA_DIR = '../../data'
 DATA_NAME = DATA_DIR + '/10vid'
 DATA_FEAT = DATA_DIR + '/10vid-feature'
 #DATA_NAME = DATA_DIR + '/YouTubeClips'
-#DATA_FEAT = DATA_DIR + '/YouTubeClips/resnet'
+#DATA_FEAT = DATA_DIR + '/resnet02'
 VIDEO_CAPS = DATA_DIR + '/msvd_video_caps.pkl'
 
 FEAT_DIM = 2048
@@ -39,7 +39,8 @@ def create_resnet():
 def video2tensor(video_path):
     # load avi file
     cap = cv2.VideoCapture(video_path)
-    h_fps = int(cap.get(cv2.CAP_PROP_FPS)/2) # number of frame in 0.5 second
+    interval = 0.2 # get frame after each interval (second)
+    h_fps = int(cap.get(cv2.CAP_PROP_FPS)/(1/interval)) 
     ret=True
     frames=[]
     count = 0
@@ -57,9 +58,7 @@ def video2tensor(video_path):
         count = count + 1
     
     # assign it to a variable
-    # frames_var = Variable(torch.tensor(frames)) # works with torch 0.4
-    frames_var = Variable(torch.FloatTensor(np.array(frames).astype(np.float64))) # works with torch 0.3.1
-    # frames_var = Variable(torch.cuda.FloatTensor(np.array(frames).astype(np.float64)))
+    frames_var = Variable(torch.cuda.FloatTensor(np.array(frames).astype(np.float64)))
 
     return frames_var
 
@@ -74,7 +73,7 @@ def extract_feature_resnet(resnet152, video_path):
 def main():
     # load pre-trained model
     model = create_resnet()
-    # model.cuda()
+    model.cuda()
     # load video id from caption file
     video_ids = load_caps(VIDEO_CAPS)
 
@@ -89,8 +88,8 @@ def main():
             feature = extract_feature_resnet(model, video_path)
             # mean pooling
             feature_mean = torch.mean(feature, dim=0)
-            # np.save(DATA_FEAT+"/"+video_id[:-4]+'.npy', feature_mean.cpu().numpy().reshape(FEAT_DIM))
-            np.save(DATA_FEAT+"/"+video_id[:-4]+'.npy', feature_mean.numpy().reshape(FEAT_DIM))
+            np.save(DATA_FEAT+"/"+video_id[:-4]+'.npy', feature_mean.cpu().numpy().reshape(FEAT_DIM))
+
             if (count % 10 == 0):
                 print("Processing: " + str(count) + "/" + str(n))
     print("Finished")
