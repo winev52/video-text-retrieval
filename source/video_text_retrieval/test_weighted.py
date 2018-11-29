@@ -2,10 +2,6 @@
 import evaluation
 import numpy
 
-class Vocabulary:
-    def __len__(self):
-        return len(self.word2idx)
-
 if __name__ == "__main__":
     DATA_PATH = '../../data'
     RUN_PATH = './models/'

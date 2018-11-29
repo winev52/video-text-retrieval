@@ -2,6 +2,7 @@ import torch
 import torch.utils.data as data
 import numpy as np
 import os
+from constant import CONSTANT
 
 
 class VTTDataset(data.Dataset):
@@ -18,7 +19,8 @@ class VTTDataset(data.Dataset):
         # with open(cap_pkl, 'rb') as f:
         #     self.captions, self.lengths, self.video_ids = pickle.load(f)
         data = np.load(cap_pkl)
-        data = np.array([r for r in data if os.path.isfile(vid_feature_dir + "/resnet/" + str(r[0]) + ".npy")])
+        path = os.path.join(vid_feature_dir, CONSTANT.rbgi3d_path)
+        data = np.array([r for r in data if os.path.isfile(os.path.join(path, str(r[0]) + ".npy"))])
 
         self.video_ids = data[:, 0]
         self.captions = [torch.from_numpy(x) for x in data[:, 1]]
@@ -37,12 +39,12 @@ class VTTDataset(data.Dataset):
         vid_feat_dir = self.vid_feat_dir
 
         # activity (i3d) feature
-        path1 = vid_feat_dir + "/rbg_i3d/" + str(video_id) + ".npy"
+        path1 = os.path.join(vid_feat_dir, CONSTANT.rbgi3d_path, str(video_id) + ".npy")
         video_feat = torch.from_numpy(np.load(path1))
         # video_feat = video_feat.mean(dim=0, keepdim=False)
 
         # audio (soundnet) Feature
-        audio_feat_file = vid_feat_dir + "/soundnet/" + str(video_id) + ".npy"
+        audio_feat_file = os.path.join(vid_feat_dir, CONSTANT.soundnet_path, str(video_id) + ".npy")
         # audio_h5 = h5py.File(audio_feat_file, "r")
         # audio_feat = audio_h5["layer24"][()]
 
@@ -88,42 +90,42 @@ def collate_fn(data):
     return images, targets, lengths, ids
 
 
-def get_vtt_loader(cap_pkl, feature, opt, batch_size=100, shuffle=True, num_workers=2):
+def get_vtt_loader(cap_pkl, feature, batch_size=100, shuffle=True, num_workers=2):
     v2t = VTTDataset(cap_pkl, feature)
     data_loader = torch.utils.data.DataLoader(
         dataset=v2t,
         batch_size=batch_size,
         shuffle=shuffle,
-        num_workers=0,
+        num_workers=num_workers,
         pin_memory=True,
         collate_fn=collate_fn,
     )
     return data_loader
 
 
-def get_loaders(data_name, vocab, crop_size, batch_size, workers, opt):
-    dpath = opt.data_path
+def get_loaders():
+    dpath = CONSTANT.data_path
     # if opt.data_name.endswith("vtt"):
-    train_caption_pkl_path = "../../data/train.npy"
-    val_caption_pkl_path = "../../data/val.npy"
+    train_caption_pkl_path = os.path.join(dpath, CONSTANT.cap_train_path)
+    val_caption_pkl_path = os.path.join(dpath, CONSTANT.cap_val_path)
     # feature_path = dpath
     train_loader = get_vtt_loader(
-        train_caption_pkl_path, dpath, opt, batch_size, True, workers
+        train_caption_pkl_path, dpath, CONSTANT.batch_size, True, CONSTANT.workers
     )
     val_loader = get_vtt_loader(
-        val_caption_pkl_path, dpath, opt, batch_size, False, workers
+        val_caption_pkl_path, dpath, CONSTANT.batch_size, False, CONSTANT.workers
     )
 
     return train_loader, val_loader
 
 
-def get_test_loader(split_name, data_name, vocab, crop_size, batch_size, workers, opt):
-    dpath = opt.data_path
+def get_test_loader():
+    dpath = CONSTANT.data_path
 
     # if opt.data_name.endswith("vtt"):
-    test_caption_pkl_path = "../../data/test.npy"
+    test_caption_pkl_path = os.path.join(dpath, CONSTANT.cap_test_path)
     test_loader = get_vtt_loader(
-        test_caption_pkl_path, dpath, opt, batch_size, True, workers
+        test_caption_pkl_path, dpath, CONSTANT.batch_size, True, CONSTANT.workers
     )
 
     return test_loader

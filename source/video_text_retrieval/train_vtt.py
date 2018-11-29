@@ -6,68 +6,20 @@ import shutil
 
 import torch
 
-#import data_i3d_audio as data
-import data_resnet as data
+
+import data_resnet as data_obj
+import data_i3d_audio as data_act
 from vocabulary import Vocabulary  # NOQA
 from model import VSE
 from evaluation import i2t, t2i, AverageMeter, LogCollector, encode_data
 
 import logging
 import tensorboard_logger as tb_logger
-
-import argparse
+from constant import CONSTANT
 
 
 def main():
-    # Hyper Parameters
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--data_path', default='../../data',
-                        help='path to datasets')
-    parser.add_argument('--data_name', default='precomp',
-                        help='msr-vtt|msvd')
-    parser.add_argument('--vocab_path', default='./vocab/',
-                        help='Path to saved vocabulary pickle files.')
-    parser.add_argument('--margin', default=0.2, type=float,
-                        help='Rank loss margin.')
-    parser.add_argument('--num_epochs', default=30, type=int,
-                        help='Number of training epochs.')
-    parser.add_argument('--batch_size', default=128, type=int,
-                        help='Size of a training mini-batch.')
-    parser.add_argument('--word_dim', default=300, type=int,
-                        help='Dimensionality of the word embedding.')
-    parser.add_argument('--embed_size', default=1024, type=int,
-                        help='Dimensionality of the joint embedding.')
-    parser.add_argument('--grad_clip', default=2., type=float,
-                        help='Gradient clipping threshold.')
-    parser.add_argument('--crop_size', default=224, type=int,
-                        help='Size of an image crop as the CNN input.')
-    parser.add_argument('--num_layers', default=1, type=int,
-                        help='Number of GRU layers.')
-    parser.add_argument('--learning_rate', default=.0002, type=float,
-                        help='Initial learning rate.')
-    parser.add_argument('--lr_update', default=10, type=int,
-                        help='Number of epochs to update the learning rate.')
-    parser.add_argument('--workers', default=10, type=int,
-                        help='Number of data loader workers.')
-    parser.add_argument('--log_step', default=10, type=int,
-                        help='Number of steps to print and record the log.')
-    parser.add_argument('--val_step', default=500, type=int,
-                        help='Number of steps to run validation.')
-    parser.add_argument('--logger_name', default='runs/runX',
-                        help='Path to save the model and Tensorboard log.')
-    parser.add_argument('--resume', default='', type=str, metavar='PATH',
-                        help='path to latest checkpoint (default: none)')
-    parser.add_argument('--max_violation', action='store_true',
-                        help='Use max instead of sum in the rank loss.')
-    parser.add_argument('--img_dim', default=2048, type=int,
-                        help='Dimensionality of the image embedding.')
-    parser.add_argument('--measure', default='cosine',
-                        help='Similarity measure used (cosine|order)')
-    parser.add_argument('--use_abs', action='store_true',
-                        help='Take the absolute value of embedding vectors.')
-    parser.add_argument('--no_imgnorm', action='store_true',
-                        help='Do not normalize the image embeddings.')
-    opt = parser.parse_args()
+    opt = CONSTANT
     print(opt)
 
     logging.basicConfig(format='%(asctime)s %(message)s', level=logging.INFO)
@@ -79,15 +31,17 @@ def main():
 	#vocab = pickle.load(open(os.path.join(
     #    opt.vocab_path, '%s_vocab.pkl' % opt.data_name), 'rb'))
     opt.vocab_size = len(vocab)
-    opt.data_name = 'msr-vtt'
-    
-    ## Trung: add finetune
-    opt.finetune = False
 
+    if CONSTANT.model == 'obj':
+        data = data_obj
+    else:
+        data = data_act
 
-    # Load data loaders
-    train_loader, val_loader = data.get_loaders(
-        opt.data_name, vocab, opt.crop_size, opt.batch_size, opt.workers, opt)
+    if CONSTANT.mode == 'train':
+        # Load data loaders
+        train_loader, val_loader = data.get_loaders()
+    else:
+        test_loader = data.get_test_loader()
 
     # Construct the model
     model = VSE(opt)
@@ -105,31 +59,34 @@ def main():
             model.Eiters = checkpoint['Eiters']
             print("=> loaded checkpoint '{}' (epoch {}, best_rsum {})"
                   .format(opt.resume, start_epoch, best_rsum))
-            validate(opt, val_loader, model)
         else:
             print("=> no checkpoint found at '{}'".format(opt.resume))
 
-    # Train the Model
-    best_rsum = 0
-    for epoch in range(opt.num_epochs):
-        adjust_learning_rate(opt, model.optimizer, epoch)
+    if CONSTANT.mode == 'train':
+        # Train the Model
+        best_rsum = 0
+        for epoch in range(opt.num_epochs):
+            adjust_learning_rate(opt, model.optimizer, epoch)
 
-        # train for one epoch
-        train(opt, train_loader, model, epoch, val_loader)
+            # train for one epoch
+            train(opt, train_loader, model, epoch, val_loader)
 
+            # evaluate on validation set
+            rsum = validate(opt, val_loader, model)
+
+            # remember best R@ sum and save checkpoint
+            is_best = rsum > best_rsum
+            best_rsum = max(rsum, best_rsum)
+            save_checkpoint({
+                'epoch': epoch + 1,
+                'model': model.state_dict(),
+                'best_rsum': best_rsum,
+                'opt': opt,
+                'Eiters': model.Eiters,
+            }, is_best, prefix=opt.logger_name + '/')
+    else:
         # evaluate on validation set
-        rsum = validate(opt, val_loader, model)
-
-        # remember best R@ sum and save checkpoint
-        is_best = rsum > best_rsum
-        best_rsum = max(rsum, best_rsum)
-        save_checkpoint({
-            'epoch': epoch + 1,
-            'model': model.state_dict(),
-            'best_rsum': best_rsum,
-            'opt': opt,
-            'Eiters': model.Eiters,
-        }, is_best, prefix=opt.logger_name + '/')
+        rsum = validate(opt, test_loader, model)
 
 
 def train(opt, train_loader, model, epoch, val_loader):

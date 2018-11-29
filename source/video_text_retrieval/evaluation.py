@@ -5,12 +5,15 @@ import pickle
 import numpy
 import time
 import numpy as np
+
 # from vocab import Vocabulary  # NOQA
 import torch
 from data_resnet import get_test_loader as get_test_loader1
 from data_i3d_audio import get_test_loader as get_test_loader2
 from model import VSE
 from collections import OrderedDict
+from constant import CONSTANT
+
 
 class AverageMeter(object):
     """Computes and stores the average and current value"""
@@ -28,7 +31,7 @@ class AverageMeter(object):
         self.val = val
         self.sum += val * n
         self.count += n
-        self.avg = self.sum / (.0001 + self.count)
+        self.avg = self.sum / (0.0001 + self.count)
 
     def __str__(self):
         """String representation for logging
@@ -37,7 +40,7 @@ class AverageMeter(object):
         if self.count == 0:
             return str(self.val)
         # for stats
-        return '%.4f (%.4f)' % (self.val, self.avg)
+        return "%.4f (%.4f)" % (self.val, self.avg)
 
 
 class LogCollector(object):
@@ -56,14 +59,14 @@ class LogCollector(object):
     def __str__(self):
         """Concatenate the meters in one log line
         """
-        s = ''
+        s = ""
         for i, (k, v) in enumerate(self.meters.items()):
             if i > 0:
-                s += '  '
-            s += k + ' ' + str(v)
+                s += "  "
+            s += k + " " + str(v)
         return s
 
-    def tb_log(self, tb_logger, prefix='', step=None):
+    def tb_log(self, tb_logger, prefix="", step=None):
         """Log using tensorboard
         """
         for k, v in self.meters.items():
@@ -89,9 +92,8 @@ def encode_data(model, data_loader, log_step=10, logging=print):
         model.logger = val_logger
 
         # compute the embeddings
-        img_emb, cap_emb = model.forward_emb(videos, captions, lengths,
-                                             volatile=True)
-											 
+        img_emb, cap_emb = model.forward_emb(videos, captions, lengths, volatile=True)
+
         # initialize the numpy arrays given the size of the embeddings
         if img_embs is None:
             img_embs = np.zeros((len(data_loader.dataset), img_emb.size(1)))
@@ -109,24 +111,35 @@ def encode_data(model, data_loader, log_step=10, logging=print):
         end = time.time()
 
         if i % log_step == 0:
-            logging('Test: [{0}/{1}]\t'
-                    '{e_log}\t'
-                    'Time {batch_time.val:.3f} ({batch_time.avg:.3f})\t'
-                    .format(
-                        i, len(data_loader), batch_time=batch_time,
-                        e_log=str(model.logger)))
+            logging(
+                "Test: [{0}/{1}]\t"
+                "{e_log}\t"
+                "Time {batch_time.val:.3f} ({batch_time.avg:.3f})\t".format(
+                    i, len(data_loader), batch_time=batch_time, e_log=str(model.logger)
+                )
+            )
         del videos, captions
 
     return img_embs, cap_embs
 
-def evalrank(model_path1, model_path2, data_path=None, split='dev', fold5=False, shared_space='both'):
+
+def evalrank(
+    model_path1,
+    model_path2,
+    data_path=None,
+    split="dev",
+    fold5=False,
+    shared_space="both",
+):
     """
     Evaluate a trained model.
     """
+    cpv = CONSTANT.cpv # caps per video
+
     # load model and options
     checkpoint = torch.load(model_path1)
-    opt = checkpoint['opt']
-    
+    opt = checkpoint["opt"]
+
     # set worker to 0 to prevent broken pipe
     # opt.workers = 0
 
@@ -135,58 +148,73 @@ def evalrank(model_path1, model_path2, data_path=None, split='dev', fold5=False,
     if data_path is not None:
         opt.data_path = data_path
     opt.vocab_path = "./vocab/"
-    # load vocabulary used by the model				   
-    vocab = pickle.load(open(os.path.join(
-        opt.vocab_path, 'vocab.pkl'), 'rb'))
-        
+    # load vocabulary used by the model
+    vocab = pickle.load(open(os.path.join(opt.vocab_path, "vocab.pkl"), "rb"))
+
     opt.vocab_size = len(vocab)
 
     # construct model
     model = VSE(opt)
 
     # load model state
-    model.load_state_dict(checkpoint['model'])
+    model.load_state_dict(checkpoint["model"])
 
-    print('Loading dataset')
-    data_loader = get_test_loader1(split, opt.data_name, vocab, opt.crop_size,
-                                  opt.batch_size, opt.workers, opt)
+    print("Loading dataset")
+    data_loader = get_test_loader1(
+        split, opt.data_name, vocab, opt.crop_size, opt.batch_size, opt.workers, opt
+    )
 
-    print('Computing results...')
+    print("Computing results...")
     img_embs1, cap_embs1 = encode_data(model, data_loader)
-	
+
     # load second model and options
     checkpoint2 = torch.load(model_path2)
-    opt = checkpoint2['opt']
+    opt = checkpoint2["opt"]
     print(opt)
 
     if data_path is not None:
         opt.data_path = data_path
     opt.vocab_path = "./vocab/"
-    # load vocabulary used by the model			   
-    vocab = pickle.load(open(os.path.join(
-        opt.vocab_path, 'vocab.pkl'), 'rb'))
-        
+    # load vocabulary used by the model
+    vocab = pickle.load(open(os.path.join(opt.vocab_path, "vocab.pkl"), "rb"))
+
     opt.vocab_size = len(vocab)
 
     # construct model
     model2 = VSE(opt)
 
     # load model state
-    model2.load_state_dict(checkpoint2['model'])
+    model2.load_state_dict(checkpoint2["model"])
 
-    print('Loading dataset')
-    data_loader = get_test_loader2(split, opt.data_name, vocab, opt.crop_size,
-                                  opt.batch_size, opt.workers, opt)
+    print("Loading dataset")
+    data_loader = get_test_loader2(
+        split, opt.data_name, vocab, opt.crop_size, opt.batch_size, opt.workers, opt
+    )
 
-    print('Computing results...')
-    img_embs2, cap_embs2 = encode_data(model2, data_loader)	
-	
-    print('Images: %d, Captions: %d' %
-          (img_embs2.shape[0] / 20, cap_embs2.shape[0]))
+    print("Computing results...")
+    img_embs2, cap_embs2 = encode_data(model2, data_loader)
+
+    print("Images: %d, Captions: %d" % (img_embs2.shape[0] / cpv, cap_embs2.shape[0]))
 
     # no cross-validation, full evaluation
-    r, rt = i2t(img_embs1, cap_embs1, img_embs2, cap_embs2, shared_space, measure=opt.measure, return_ranks=True)
-    ri, rti = t2i(img_embs1, cap_embs1, img_embs2, cap_embs2, shared_space, measure=opt.measure, return_ranks=True)
+    r, rt = i2t(
+        img_embs1,
+        cap_embs1,
+        img_embs2,
+        cap_embs2,
+        shared_space,
+        measure=opt.measure,
+        return_ranks=True,
+    )
+    ri, rti = t2i(
+        img_embs1,
+        cap_embs1,
+        img_embs2,
+        cap_embs2,
+        shared_space,
+        measure=opt.measure,
+        return_ranks=True,
+    )
     ar = (r[0] + r[1] + r[2]) / 3
     ari = (ri[0] + ri[1] + ri[2]) / 3
     rsum = r[0] + r[1] + r[2] + ri[0] + ri[1] + ri[2]
@@ -196,49 +224,57 @@ def evalrank(model_path1, model_path2, data_path=None, split='dev', fold5=False,
     print("Average t2i Recall: %.1f" % ari)
     print("Text to image: %.1f %.1f %.1f %.1f %.1f" % ri)
 
-    torch.save({'rt': rt, 'rti': rti}, 'ranks.pth.tar')
+    torch.save({"rt": rt, "rti": rti}, "ranks.pth.tar")
 
 
-def i2t(videos, captions, videos2=None, captions2=None, shared_space='one_space', measure='cosine', return_ranks=False):
+def i2t(
+    videos,
+    captions,
+    videos2=None,
+    captions2=None,
+    shared_space="one_space",
+    measure="cosine",
+    return_ranks=False,
+):
     """
     Videos->Text (Video Annotation)
     Videos: (20N, K) matrix of videos
     Captions: (20N, K) matrix of captions
     """
 
-    
-    npts = videos.shape[0] // 20
+    cpv = CONSTANT.cpv # caps per video
+    npts = videos.shape[0] // cpv
     index_list = []
     print(npts)
-	
+
     ranks = numpy.zeros(npts)
     top1 = numpy.zeros(npts)
     for index in range(npts):
         # Get query image
-        im = videos[20 * index].reshape(1, videos.shape[1])
-        
+        im = videos[cpv * index].reshape(1, videos.shape[1])
+
         # Compute scores
-        if 'both' == shared_space:
-            im2 = videos2[20 * index].reshape(1, videos2.shape[1])
+        if "both" == shared_space:
+            im2 = videos2[cpv * index].reshape(1, videos2.shape[1])
             d1 = numpy.dot(im, captions.T).flatten()
             d2 = numpy.dot(im2, captions2.T).flatten()
-            d= d1+d2
+            d = d1 + d2
         else:
             d = numpy.dot(im, captions.T).flatten()
         # elif 'object_text' == shared_space:
         #     d = numpy.dot(im, captions.T).flatten()
         # elif 'activity_text' == shared_space:
-            # d = numpy.dot(im2, captions2.T).flatten()		
-			
+        # d = numpy.dot(im2, captions2.T).flatten()
+
         inds = numpy.argsort(d)[::-1]
         index_list.append(inds[0])
         # Score
         rank = 1e20
-        for i in range(20 * index, 20 * index + 20, 1):
+        for i in range(cpv * index, cpv * index + cpv, 1):
             tmp = numpy.where(inds == i)[0][0]
             if tmp < rank:
                 rank = tmp
-                flag=i-20 * index
+                flag = i - cpv * index
         ranks[index] = rank
         top1[index] = inds[0]
 
@@ -254,45 +290,53 @@ def i2t(videos, captions, videos2=None, captions2=None, shared_space='one_space'
         return (r1, r5, r10, medr, meanr)
 
 
-		
-def t2i(videos, captions, videos2=None, captions2=None, shared_space='one_space', measure='cosine', return_ranks=False):
+def t2i(
+    videos,
+    captions,
+    videos2=None,
+    captions2=None,
+    shared_space="one_space",
+    measure="cosine",
+    return_ranks=False,
+):
     """
     Text->Videos (Video Search)
     Videos: (20N, K) matrix of videos
     Captions: (20N, K) matrix of captions
     """
-    
-    npts = videos.shape[0] // 20
-    ims = numpy.array([videos[i] for i in range(0, len(videos), 20)])
+
+    cpv = CONSTANT.cpv # caps per video
+    npts = videos.shape[0] // cpv
+    ims = numpy.array([videos[i] for i in range(0, len(videos), cpv)])
     # ims2 = numpy.array([videos2[i] for i in range(0, len(videos2), 20)])
-    if 'both' == shared_space:
-        ims2 = numpy.array([videos2[i] for i in range(0, len(videos2), 20)])
-	
-    ranks = numpy.zeros(20 * npts)
-    top1 = numpy.zeros(20 * npts)
+    if "both" == shared_space:
+        ims2 = numpy.array([videos2[i] for i in range(0, len(videos2), cpv)])
+
+    ranks = numpy.zeros(cpv * npts)
+    top1 = numpy.zeros(cpv * npts)
     for index in range(npts):
-        
+
         # Get query captions
-        queries = captions[20 * index:20 * index + 20]
+        queries = captions[cpv * index : cpv * index + cpv]
         # queries2 = captions2[20 * index:20 * index + 20]
 
-        if 'both' == shared_space:
-            queries2 = captions2[20 * index:20 * index + 20]
+        if "both" == shared_space:
+            queries2 = captions2[cpv * index : cpv * index + cpv]
             d1 = numpy.dot(queries, ims.T)
-            d2 = numpy.dot(queries2, ims2.T)		
-            d = d1+d2
-        else: 
+            d2 = numpy.dot(queries2, ims2.T)
+            d = d1 + d2
+        else:
             d = numpy.dot(queries, ims.T)
         # elif 'object_text' == shared_space:
         #     d = numpy.dot(queries, ims.T)
         # elif 'activity_text' == shared_space:
-        #     d = numpy.dot(queries2, ims2.T)			
-		
+        #     d = numpy.dot(queries2, ims2.T)
+
         inds = numpy.zeros(d.shape)
         for i in range(len(inds)):
             inds[i] = numpy.argsort(d[i])[::-1]
-            ranks[20 * index + i] = numpy.where(inds[i] == index)[0][0]
-            top1[20 * index + i] = inds[i][0]
+            ranks[cpv * index + i] = numpy.where(inds[i] == index)[0][0]
+            top1[cpv * index + i] = inds[i][0]
 
     # Compute metrics
     r1 = 100.0 * len(numpy.where(ranks < 1)[0]) / len(ranks)
