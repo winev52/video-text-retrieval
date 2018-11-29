@@ -8,8 +8,8 @@ import numpy as np
 
 # from vocab import Vocabulary  # NOQA
 import torch
-from data_resnet import get_test_loader as get_test_loader1
-from data_i3d_audio import get_test_loader as get_test_loader2
+from data_resnet import get_test_loader as get_resnet_testloader
+from data_i3d_audio import get_test_loader as get_i3daudio_testloader
 from model import VSE
 from collections import OrderedDict
 from constant import CONSTANT
@@ -123,78 +123,55 @@ def encode_data(model, data_loader, log_step=10, logging=print):
     return img_embs, cap_embs
 
 
-def evalrank(
-    model_path1,
-    model_path2,
-    data_path=None,
-    split="dev",
-    fold5=False,
-    shared_space="both",
-):
+def evalrank():
     """
     Evaluate a trained model.
     """
-    cpv = CONSTANT.cpv # caps per video
+    cpv = CONSTANT.cpv  # caps per video
 
-    # load model and options
-    checkpoint = torch.load(model_path1)
-    opt = checkpoint["opt"]
-
-    # set worker to 0 to prevent broken pipe
-    # opt.workers = 0
-
-    print(opt)
-
-    if data_path is not None:
-        opt.data_path = data_path
-    opt.vocab_path = "./vocab/"
     # load vocabulary used by the model
-    vocab = pickle.load(open(os.path.join(opt.vocab_path, "vocab.pkl"), "rb"))
+    vocab = pickle.load(open(os.path.join(CONSTANT.vocab_path, "vocab.pkl"), "rb"))
 
+    # construct model resnet
+    checkpoint = torch.load(CONSTANT.model_path1)
+    opt = checkpoint["opt"]
     opt.vocab_size = len(vocab)
 
-    # construct model
     model = VSE(opt)
-
-    # load model state
-    model.load_state_dict(checkpoint["model"])
+    start_epoch = checkpoint['epoch']
+    best_rsum = checkpoint['best_rsum']
+    model.load_state_dict(checkpoint['model'])
+    model.Eiters = checkpoint['Eiters']
+    print("=> loaded checkpoint '{}' (epoch {}, best_rsum {})"
+            .format(CONSTANT.model_path1, start_epoch, best_rsum))
 
     print("Loading dataset")
-    data_loader = get_test_loader1(
-        split, opt.data_name, vocab, opt.crop_size, opt.batch_size, opt.workers, opt
-    )
+    data_loader = get_resnet_testloader()
 
     print("Computing results...")
     img_embs1, cap_embs1 = encode_data(model, data_loader)
 
-    # load second model and options
-    checkpoint2 = torch.load(model_path2)
-    opt = checkpoint2["opt"]
-    print(opt)
-
-    if data_path is not None:
-        opt.data_path = data_path
-    opt.vocab_path = "./vocab/"
-    # load vocabulary used by the model
-    vocab = pickle.load(open(os.path.join(opt.vocab_path, "vocab.pkl"), "rb"))
-
+    # construct model i3d-audio
+    checkpoint = torch.load(CONSTANT.model_path2)
+    opt = checkpoint["opt"]
     opt.vocab_size = len(vocab)
 
-    # construct model
-    model2 = VSE(opt)
-
-    # load model state
-    model2.load_state_dict(checkpoint2["model"])
+    model = VSE(opt)
+    start_epoch = checkpoint['epoch']
+    best_rsum = checkpoint['best_rsum']
+    model.load_state_dict(checkpoint['model'])
+    model.Eiters = checkpoint['Eiters']
+    print("=> loaded checkpoint '{}' (epoch {}, best_rsum {})"
+            .format(CONSTANT.model_path2, start_epoch, best_rsum))
 
     print("Loading dataset")
-    data_loader = get_test_loader2(
-        split, opt.data_name, vocab, opt.crop_size, opt.batch_size, opt.workers, opt
-    )
+    data_loader = get_i3daudio_testloader()
 
     print("Computing results...")
-    img_embs2, cap_embs2 = encode_data(model2, data_loader)
+    img_embs2, cap_embs2 = encode_data(model, data_loader)
 
-    print("Images: %d, Captions: %d" % (img_embs2.shape[0] / cpv, cap_embs2.shape[0]))
+    # print total images and captions
+    print("Images: %d, Captions: %d" % (img_embs2.shape[0] // cpv, cap_embs2.shape[0]))
 
     # no cross-validation, full evaluation
     r, rt = i2t(
@@ -202,19 +179,21 @@ def evalrank(
         cap_embs1,
         img_embs2,
         cap_embs2,
-        shared_space,
-        measure=opt.measure,
+        "both",
+        measure=CONSTANT.measure,
         return_ranks=True,
     )
+
     ri, rti = t2i(
         img_embs1,
         cap_embs1,
         img_embs2,
         cap_embs2,
-        shared_space,
-        measure=opt.measure,
+        "both",
+        measure=CONSTANT.measure,
         return_ranks=True,
     )
+
     ar = (r[0] + r[1] + r[2]) / 3
     ari = (ri[0] + ri[1] + ri[2]) / 3
     rsum = r[0] + r[1] + r[2] + ri[0] + ri[1] + ri[2]
@@ -242,7 +221,7 @@ def i2t(
     Captions: (20N, K) matrix of captions
     """
 
-    cpv = CONSTANT.cpv # caps per video
+    cpv = CONSTANT.cpv  # caps per video
     npts = videos.shape[0] // cpv
     index_list = []
     print(npts)
@@ -305,7 +284,7 @@ def t2i(
     Captions: (20N, K) matrix of captions
     """
 
-    cpv = CONSTANT.cpv # caps per video
+    cpv = CONSTANT.cpv  # caps per video
     npts = videos.shape[0] // cpv
     ims = numpy.array([videos[i] for i in range(0, len(videos), cpv)])
     # ims2 = numpy.array([videos2[i] for i in range(0, len(videos2), 20)])

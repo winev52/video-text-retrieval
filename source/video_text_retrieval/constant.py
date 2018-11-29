@@ -5,7 +5,11 @@ def __parse_args():
     parser.add_argument('--mode', default='train', type=str,
                         help='train|test')
     parser.add_argument('--model', default='obj', type=str,
-                        help='obj|act')
+                        help='obj|act|both')
+    parser.add_argument('--model_path1', default='', type=str,
+                        help='path to resnet model for test')
+    parser.add_argument('--model_path2', default='', type=str,
+                        help='path to i3d audio model for test')
     parser.add_argument('--cpv', default=20, type=int,
                         help='the number of captions per video')
     parser.add_argument('--data_path', default='../../data',

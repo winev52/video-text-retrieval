@@ -11,7 +11,7 @@ import data_resnet as data_obj
 import data_i3d_audio as data_act
 from vocabulary import Vocabulary  # NOQA
 from model import VSE
-from evaluation import i2t, t2i, AverageMeter, LogCollector, encode_data
+from evaluation import i2t, t2i, AverageMeter, LogCollector, encode_data, evalrank
 
 import logging
 import tensorboard_logger as tb_logger
@@ -21,6 +21,10 @@ from constant import CONSTANT
 def main():
     opt = CONSTANT
     print(opt)
+
+    if CONSTANT.mode == 'test' and CONSTANT.model == 'both':
+        evalrank()
+        return
 
     logging.basicConfig(format='%(asctime)s %(message)s', level=logging.INFO)
     tb_logger.configure(opt.logger_name, flush_secs=5)
