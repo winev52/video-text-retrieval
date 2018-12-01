@@ -48,7 +48,7 @@ def __parse_args():
                         help='Size of an image crop as the CNN input.')
     parser.add_argument('--num_layers', default=1, type=int,
                         help='Number of GRU layers.')
-    parser.add_argument('--learning_rate', default=.0002, type=float,
+    parser.add_argument('--learning_rate', default=.002, type=float,
                         help='Initial learning rate.')
     parser.add_argument('--lr_update', default=10, type=int,
                         help='Number of epochs to update the learning rate.')
@@ -56,7 +56,7 @@ def __parse_args():
                         help='Number of data loader workers.')
     parser.add_argument('--log_step', default=10, type=int,
                         help='Number of steps to print and record the log.')
-    parser.add_argument('--val_step', default=500, type=int,
+    parser.add_argument('--val_step', default=5000, type=int,
                         help='Number of steps to run validation.')
     parser.add_argument('--logger_name', default='runs/runX',
                         help='Path to save the model and Tensorboard log.')

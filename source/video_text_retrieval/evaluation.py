@@ -224,7 +224,6 @@ def i2t(
     cpv = CONSTANT.cpv  # caps per video
     npts = videos.shape[0] // cpv
     index_list = []
-    print(npts)
 
     ranks = numpy.zeros(npts)
     top1 = numpy.zeros(npts)

@@ -87,7 +87,7 @@ def get_vtt_loader(cap_pkl, feature, batch_size=100, shuffle=True, num_workers=2
         dataset=v2t,
         batch_size=batch_size,
         shuffle=shuffle,
-        num_workers=0,
+        num_workers=num_workers,
         pin_memory=True,
         collate_fn=collate_fn,
     )

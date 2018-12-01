@@ -8,6 +8,7 @@ import torch.backends.cudnn as cudnn
 from torch.nn.utils.clip_grad import clip_grad_norm
 import numpy as np
 from collections import OrderedDict
+import sys
 
 
 def l2norm(X):
@@ -147,21 +148,39 @@ class Loss(nn.Module):
         scores = self.sim(im, s)
         diagonal = scores.diag().view(im.size(0), 1)
         d1 = diagonal.expand_as(scores)
-        d2 = diagonal.t().expand_as(scores)	
-        
+        d2 = diagonal.t().expand_as(scores)
+
         d1_sort, d1_indice=torch.sort(scores)
-        val, id1 = torch.min(d1_indice,1)
-        rank_weights1 = id1.float()
+        rank_weights1 = Variable(torch.zeros(scores.size(0)).cuda())
+        d1_indice_data = d1_indice.data.cpu().numpy()
+        for i in range(d1.size(0)):
+            for j in range(d1_indice.size(1)):
+                if d1_indice_data[i][j] == i:
+                    break
+            rank_weights1[i] = 1/(j + 1)
         
-        for j in range(d1.size(0)):
-            rank_weights1[j]=1/(rank_weights1[j]+1)
+        # d1_sort, d1_indice=torch.sort(scores)
+        # val, id1 = torch.min(d1_indice,1)
+        # rank_weights1 = id1.float()
         
+        # for j in range(d1.size(0)):
+        #     rank_weights1[j]=1/(rank_weights1[j]+1)
+
         d2_sort, d2_indice=torch.sort(scores.t())
-        val, id2 = torch.min(d2_indice,1)
-        rank_weights2 = id2.float()
+        rank_weights2 = Variable(torch.zeros(scores.size(0)).cuda())
+        d2_indice_data = d2_indice.data.cpu().numpy()
+        for i in range(d2.size(0)):
+            for j in range(d2_indice.size(1)):
+                if d2_indice_data[i][j] == i:
+                    break
+            rank_weights2[i] = 1/(j + 1)
         
-        for k in range(d2.size(0)):
-            rank_weights2[j]=1/(rank_weights2[j]+1)	
+        # d2_sort, d2_indice=torch.sort(scores.t())
+        # val, id2 = torch.min(d2_indice,1)
+        # rank_weights2 = id2.float()
+        
+        # for k in range(d2.size(0)):
+        #     rank_weights2[j]=1/(rank_weights2[j]+1)	
             
         # compare every diagonal score to scores in its column
         # caption retrieval
@@ -215,7 +234,7 @@ class VSE(object):
                                          measure=opt.measure,
                                          max_violation=opt.max_violation)
         params = list(self.txt_enc.parameters())
-        params += list(self.img_enc.fc.parameters())
+        params += list(self.img_enc.parameters())
         if opt.finetune:
             params += list(self.img_enc.cnn.parameters())
         self.params = params

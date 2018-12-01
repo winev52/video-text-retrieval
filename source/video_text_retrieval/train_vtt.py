@@ -119,6 +119,7 @@ def train(opt, train_loader, model, epoch, val_loader):
 
         # Print log info
         if model.Eiters % opt.log_step == 0:
+            # print(model.params)
             logging.info(
                 'Epoch: [{0}][{1}/{2}]\t'
                 '{e_log}\t'
