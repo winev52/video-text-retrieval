@@ -28,23 +28,33 @@ class EncoderImage(nn.Module):
         self.no_imgnorm = no_imgnorm
         self.use_abs = use_abs
 
-        self.fc = nn.Linear(img_dim, embed_size)
+        self.fc1 = nn.Linear(img_dim, embed_size)
+        # self.a1 = nn.LeakyReLU()
+        # self.fc2 = nn.Linear(embed_size*2, embed_size)
 
         self.init_weights()
 
     def init_weights(self):
         """Xavier initialization for the fully connected layer
         """
-        r = np.sqrt(6.) / np.sqrt(self.fc.in_features +
-                                  self.fc.out_features)
-        self.fc.weight.data.uniform_(-r, r)
-        self.fc.bias.data.fill_(0)
+        r = np.sqrt(6.) / np.sqrt(self.fc1.in_features +
+                                  self.fc1.out_features)
+        self.fc1.weight.data.uniform_(-r, r)
+        self.fc1.bias.data.fill_(0)
+
+        # r = np.sqrt(6.) / np.sqrt(self.fc2.in_features +
+        #                           self.fc2.out_features)
+
+        # self.fc2.weight.data.uniform_(-r, r)
+        # self.fc2.bias.data.fill_(0)
 
     def forward(self, images):
         """Extract image feature vectors."""
         # assuming that the precomputed features are already l2-normalized
 
-        features = self.fc(images)
+        features = self.fc1(images)
+        # features = self.a1(features)
+        # features = self.fc2(features)
 
         # normalize in the joint embedding space
         if not self.no_imgnorm:
@@ -85,10 +95,17 @@ class EncoderText(nn.Module):
         # caption embedding
         self.rnn = nn.GRU(word_dim, embed_size, num_layers, batch_first=True)
 
+        # self.fc = nn.Linear(embed_size*2, embed_size)
+
         self.init_weights()
 
     def init_weights(self):
         self.embed.weight.data.uniform_(-0.1, 0.1)
+
+        # r = np.sqrt(6.) / np.sqrt(self.fc.in_features +
+        #                           self.fc.out_features)
+        # self.fc.weight.data.uniform_(-r, r)
+        # self.fc.bias.data.fill_(0)
 
     def forward(self, x, lengths):
         """Handles variable size captions
@@ -106,6 +123,8 @@ class EncoderText(nn.Module):
         I = torch.LongTensor(lengths).view(-1, 1, 1)
         I = Variable(I.expand(x.size(0), 1, self.embed_size)-1).cuda()
         out = torch.gather(padded[0], 1, I).squeeze(1)
+
+        # out = self.fc(out)
 
         # normalization in the joint embedding space
         out = l2norm(out)
@@ -329,6 +348,11 @@ class VSE(object):
 
         # compute gradient and do SGD step
         loss.backward()
+
+        # p = list(self.img_enc.fc2.parameters())
+        # print("var:", p[0])
+        # print("grad: ", p[0].grad)
+        # sys.exit(0)
         if self.grad_clip > 0:
             clip_grad_norm(self.params, self.grad_clip)
         self.optimizer.step()

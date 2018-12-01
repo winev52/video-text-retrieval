@@ -51,11 +51,14 @@ def main():
     model = VSE(opt)
 
     # optionally resume from a checkpoint
+    start_epoch = 0
+    end_epoch = opt.num_epochs
     if opt.resume:
         if os.path.isfile(opt.resume):
             print("=> loading checkpoint '{}'".format(opt.resume))
             checkpoint = torch.load(opt.resume)
             start_epoch = checkpoint['epoch']
+            end_epoch = start_epoch + opt.num_epochs
             best_rsum = checkpoint['best_rsum']
             model.load_state_dict(checkpoint['model'])
             # Eiters is used to show logs as the continuation of another
@@ -69,7 +72,7 @@ def main():
     if CONSTANT.mode == 'train':
         # Train the Model
         best_rsum = 0
-        for epoch in range(opt.num_epochs):
+        for epoch in range(start_epoch, end_epoch):
             adjust_learning_rate(opt, model.optimizer, epoch)
 
             # train for one epoch
