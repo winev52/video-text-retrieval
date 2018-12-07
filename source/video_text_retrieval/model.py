@@ -1,7 +1,6 @@
 import torch
 import torch.nn as nn
 import torch.nn.init
-import torchvision.models as models
 from torch.autograd import Variable
 from torch.nn.utils.rnn import pack_padded_sequence, pad_packed_sequence
 import torch.backends.cudnn as cudnn
@@ -37,10 +36,11 @@ class EncoderImage(nn.Module):
     def init_weights(self):
         """Xavier initialization for the fully connected layer
         """
-        r = np.sqrt(6.) / np.sqrt(self.fc1.in_features +
-                                  self.fc1.out_features)
-        self.fc1.weight.data.uniform_(-r, r)
-        self.fc1.bias.data.fill_(0)
+        pass
+        # r = np.sqrt(6.) / np.sqrt(self.fc1.in_features +
+        #                           self.fc1.out_features)
+        # self.fc1.weight.data.uniform_(-r, r)
+        # self.fc1.bias.data.fill_(0)
 
         # r = np.sqrt(6.) / np.sqrt(self.fc2.in_features +
         #                           self.fc2.out_features)
@@ -101,7 +101,8 @@ class EncoderText(nn.Module):
         self.init_weights()
 
     def init_weights(self):
-        self.embed.weight.data.uniform_(-0.1, 0.1)
+        pass
+        # self.embed.weight.data.uniform_(-0.1, 0.1)
 
         # r = np.sqrt(6.) / np.sqrt(self.fc.in_features +
         #                           self.fc.out_features)
