@@ -84,9 +84,10 @@ class EncoderImage(nn.Module):
 class EncoderText(nn.Module):
 
     def __init__(self, vocab_size, word_dim, embed_size, num_layers,
-                 use_abs=False):
+                 use_abs=False,  no_imgnorm=False):
         super(EncoderText, self).__init__()
         self.use_abs = use_abs
+        self.no_imgnorm = no_imgnorm
         self.embed_size = embed_size
 
         # word embedding
@@ -112,22 +113,27 @@ class EncoderText(nn.Module):
         """
         # Embed word ids to vectors
         x = self.embed(x)
-    #print(lengths)
+        
         packed = pack_padded_sequence(x, lengths, batch_first=True)
-
+        # print(np.sum(lengths))
+        # print(packed.data.size())
         # Forward propagate RNN
         out, _ = self.rnn(packed)
+        # print(out.data.size())
 
         # Reshape *final* output to (batch_size, hidden_size)
         padded = pad_packed_sequence(out, batch_first=True)
         I = torch.LongTensor(lengths).view(-1, 1, 1)
         I = Variable(I.expand(x.size(0), 1, self.embed_size)-1).cuda()
+        # print(padded[0][24][lengths[24] - 1])
         out = torch.gather(padded[0], 1, I).squeeze(1)
-
+        # print(out[24].data.cpu().numpy())
         # out = self.fc(out)
+        # print(list(self.rnn.parameters()))
 
         # normalization in the joint embedding space
-        out = l2norm(out)
+        if not self.no_imgnorm:
+            out = l2norm(out)
 
         # take absolute value, used by order embeddings
         if self.use_abs:
@@ -139,6 +145,12 @@ class EncoderText(nn.Module):
 def cosine_sim(im, s):
     """Cosine similarity between all the image and sentence pairs
     """
+    # nim = torch.pow(im, 2).sum(dim=1).sqrt().view(im.size(0), 1)
+    # print(nim.shape)
+    # ns = torch.pow(s, 2).sum(dim=1).sqrt().view(1, s.size(0))
+    # print(ns.shape)
+    # dom = nim.mm(ns)
+    # return torch.div(im.mm(s.t()), dom)
     return im.mm(s.t())
 
 
@@ -163,13 +175,22 @@ class Loss(nn.Module):
         self.max_violation = max_violation
 
     def forward(self, im, s):
+        # print('im', im[:3, :10].data.cpu().numpy())
+        # print('s', s[:3, :10].data.cpu().numpy())
+        # sys.exit(0)
         # compute image-sentence score matrix
         scores = self.sim(im, s)
         diagonal = scores.diag().view(im.size(0), 1)
+        # print(diagonal)
+        # sys.exit(0)
         d1 = diagonal.expand_as(scores)
         d2 = diagonal.t().expand_as(scores)
 
+        # print('score', scores[0].data.cpu().numpy())
+
         d1_sort, d1_indice=torch.sort(scores)
+        # print(d1_sort[0])
+        # sys.exit(0)
         rank_weights1 = Variable(torch.zeros(scores.size(0)).cuda())
         d1_indice_data = d1_indice.data.cpu().numpy()
         for i in range(d1.size(0)):
@@ -199,14 +220,18 @@ class Loss(nn.Module):
         # rank_weights2 = id2.float()
         
         # for k in range(d2.size(0)):
-        #     rank_weights2[j]=1/(rank_weights2[j]+1)	
+        #     rank_weights2[k]=1/(rank_weights2[k]+1)	
             
         # compare every diagonal score to scores in its column
         # caption retrieval
         cost_s = (self.margin + scores - d1).clamp(min=0)
+        # cost_s = (self.margin + scores - d1)
         # compare every diagonal score to scores in its row
         # image retrieval
         cost_im = (self.margin + scores - d2).clamp(min=0)
+        # cost_im = (self.margin + scores - d2)
+        # print(cost_s[0])
+        # sys.exit(0)
 
         # clear diagonals
         mask = torch.eye(scores.size(0)) > .5
@@ -219,10 +244,13 @@ class Loss(nn.Module):
         # keep the maximum violating negative for each query
         cost_s = cost_s.max(1)[0]
         cost_im = cost_im.max(0)[0]
-        
+
         # weight similarity scores
         cost_s= torch.mul(rank_weights1, cost_s)
         cost_im= torch.mul(rank_weights2, cost_im)
+
+        # print(cost_s)
+        # sys.exit(0)
 
         return cost_s.sum() + cost_im.sum()
 
@@ -242,7 +270,8 @@ class VSE(object):
                                     no_imgnorm=opt.no_imgnorm)
         self.txt_enc = EncoderText(opt.vocab_size, opt.word_dim,
                                    opt.embed_size, opt.num_layers,
-                                   use_abs=opt.use_abs)
+                                   use_abs=opt.use_abs,
+                                   no_imgnorm=opt.no_imgnorm)
         if torch.cuda.is_available():
             self.img_enc.cuda()
             self.txt_enc.cuda()
@@ -258,8 +287,9 @@ class VSE(object):
             params += list(self.img_enc.cnn.parameters())
         self.params = params
 
-        self.optimizer = torch.optim.Adam(params, lr=opt.learning_rate)
-
+        # self.optimizer = torch.optim.Adam(params, lr=opt.learning_rate)
+        # self.optimizer = torch.optim.RMSprop(params, lr=opt.learning_rate, weight_decay=1e-8)
+        self.optimizer = torch.optim.RMSprop(params, lr=opt.learning_rate)
         self.Eiters = 0
 
     def state_dict(self):
@@ -347,12 +377,19 @@ class VSE(object):
         loss = self.forward_loss(img_emb, cap_emb)
 
         # compute gradient and do SGD step
+        # loss.register_hook(print)
+        # loss.retain_grad()
         loss.backward()
 
         # p = list(self.img_enc.fc2.parameters())
-        # print("var:", p[0])
+        # print("loss:", loss.requires_grad)
         # print("grad: ", p[0].grad)
+        # print(list(self.txt_enc.parameters())[0][0].data.cpu().numpy())
+        # print(list(self.txt_enc.parameters())[0].grad)
+        # print(list(self.img_enc.parameters())[0][0].data.cpu().numpy())
         # sys.exit(0)
         if self.grad_clip > 0:
             clip_grad_norm(self.params, self.grad_clip)
         self.optimizer.step()
+
+np.set_printoptions(threshold=sys.maxsize)

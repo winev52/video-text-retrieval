@@ -48,7 +48,7 @@ def __parse_args():
                         help='Size of an image crop as the CNN input.')
     parser.add_argument('--num_layers', default=1, type=int,
                         help='Number of GRU layers.')
-    parser.add_argument('--learning_rate', default=.002, type=float,
+    parser.add_argument('--learning_rate', default=.0002, type=float,
                         help='Initial learning rate.')
     parser.add_argument('--lr_update', default=10, type=int,
                         help='Number of epochs to update the learning rate.')

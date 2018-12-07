@@ -81,7 +81,7 @@ def collate_fn(data):
     return images, targets, lengths, ids
 
 
-def get_vtt_loader(cap_pkl, feature, batch_size=100, shuffle=True, num_workers=2):
+def get_vtt_loader(cap_pkl, feature, batch_size=100, shuffle=True, num_workers=2, drop_last=False):
     v2t = VTTDataset(cap_pkl, feature)
     data_loader = torch.utils.data.DataLoader(
         dataset=v2t,
@@ -90,6 +90,7 @@ def get_vtt_loader(cap_pkl, feature, batch_size=100, shuffle=True, num_workers=2
         num_workers=num_workers,
         pin_memory=True,
         collate_fn=collate_fn,
+        drop_last=drop_last
     )
     return data_loader
 
@@ -101,7 +102,7 @@ def get_loaders():
     val_caption_pkl_path = os.path.join(dpath, CONSTANT.cap_val_path)
     # feature_path = dpath
     train_loader = get_vtt_loader(
-        train_caption_pkl_path, dpath, CONSTANT.batch_size, True, CONSTANT.workers
+        train_caption_pkl_path, dpath, CONSTANT.batch_size, True, CONSTANT.workers, drop_last=True
     )
     val_loader = get_vtt_loader(
         val_caption_pkl_path, dpath, CONSTANT.batch_size, False, CONSTANT.workers
