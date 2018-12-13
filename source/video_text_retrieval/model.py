@@ -21,7 +21,7 @@ def l2norm(X):
 # We consider Image feature is precomputed
 class EncoderImage(nn.Module):
 
-    def __init__(self, data_name, img_dim, embed_size, use_abs=False, no_imgnorm=False):
+    def __init__(self, img_dim, embed_size, use_abs=False, no_imgnorm=False):
         super(EncoderImage, self).__init__()
         self.embed_size = embed_size
         self.no_imgnorm = no_imgnorm
@@ -266,13 +266,21 @@ class VSE(object):
         # tutorials/09 - Image Captioning
         # Build Models
         self.grad_clip = opt.grad_clip
-        self.img_enc = EncoderImage(opt.data_name, opt.img_dim, opt.embed_size,
+        self.img_enc = EncoderImage(opt.img_dim, opt.embed_size,
                                     use_abs=opt.use_abs,
                                     no_imgnorm=opt.no_imgnorm)
         self.txt_enc = EncoderText(opt.vocab_size, opt.word_dim,
                                    opt.embed_size, opt.num_layers,
                                    use_abs=opt.use_abs,
                                    no_imgnorm=opt.no_imgnorm)
+
+        # pretrain embeding
+        if opt.word2vec_path:
+            np_weights = np.load(opt.word2vec_path)
+            t_weights = torch.from_numpy(np_weights)
+            self.txt_enc.embed.load_state_dict({'weight': t_weights})
+            self.txt_enc.embed.weight.requires_grad = opt.word2vec_trainable
+
         if torch.cuda.is_available():
             self.img_enc.cuda()
             self.txt_enc.cuda()
@@ -280,12 +288,13 @@ class VSE(object):
 
         # Loss and Optimizer
         self.criterion = Loss(margin=opt.margin,
-                                         measure=opt.measure,
-                                         max_violation=opt.max_violation)
+                            measure=opt.measure,
+                            max_violation=opt.max_violation)
         params = list(self.txt_enc.parameters())
         params += list(self.img_enc.parameters())
-        if opt.finetune:
-            params += list(self.img_enc.cnn.parameters())
+        # if opt.finetune:
+        #     params += list(self.img_enc.cnn.parameters())
+        params = filter(lambda p: p.requires_grad, params)
         self.params = params
 
         # self.optimizer = torch.optim.Adam(params, lr=opt.learning_rate)

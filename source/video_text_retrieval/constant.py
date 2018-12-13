@@ -28,9 +28,7 @@ def __parse_args():
                         help='soundnet feature dir relative to data_path')
     parser.add_argument('--finetune', default=False, type=bool,
                         help='fine tune the the pre-train model. NOT AVAILABLE YET')
-    parser.add_argument('--data_name', default='precomp',
-                        help='msr-vtt|msvd')
-    parser.add_argument('--vocab_path', default='./vocab/',
+    parser.add_argument('--vocab_path', default='../../data/glove.twitter.100d.pkl',
                         help='Path to saved vocabulary pickle files.')
     parser.add_argument('--margin', default=0.2, type=float,
                         help='Rank loss margin.')
@@ -40,6 +38,10 @@ def __parse_args():
                         help='Size of a training mini-batch.')
     parser.add_argument('--word_dim', default=300, type=int,
                         help='Dimensionality of the word embedding.')
+    parser.add_argument('--word2vec_path', default='../../data/glove.twitter.100d.npy', type=str,
+                        help='The path of weights of word embeding in npy format')
+    parser.add_argument('--word2vec_trainable', action='store_true',
+                        help='Finetune the word embeding layer')
     parser.add_argument('--embed_size', default=1024, type=int,
                         help='Dimensionality of the joint embedding.')
     parser.add_argument('--grad_clip', default=2., type=float,

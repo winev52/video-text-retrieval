@@ -30,11 +30,17 @@ def main():
     tb_logger.configure(opt.logger_name, flush_secs=5)
 
     # Load Vocabulary Wrapper
-    vocab = pickle.load(open(os.path.join(
-        opt.vocab_path, 'vocab.pkl'), 'rb'))
+    with open(opt.vocab_path, 'rb') as f:
+        vocab = pickle.load(f)
+        # dict or Vocabulary
+        if isinstance(vocab, dict):
+            opt.vocab_size = len(vocab)
+        else:
+            opt.vocab_size = vocab.idx
+        del vocab
 	#vocab = pickle.load(open(os.path.join(
     #    opt.vocab_path, '%s_vocab.pkl' % opt.data_name), 'rb'))
-    opt.vocab_size = len(vocab)
+    
 
     if CONSTANT.model == 'obj':
         data = data_obj
@@ -53,6 +59,7 @@ def main():
     # optionally resume from a checkpoint
     start_epoch = 0
     end_epoch = opt.num_epochs
+    best_rsum = 0
     if opt.resume:
         if os.path.isfile(opt.resume):
             print("=> loading checkpoint '{}'".format(opt.resume))
@@ -71,7 +78,6 @@ def main():
 
     if CONSTANT.mode == 'train':
         # Train the Model
-        best_rsum = 0
         for epoch in range(start_epoch, end_epoch):
             adjust_learning_rate(opt, model.optimizer, epoch)
 
