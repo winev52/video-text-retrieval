@@ -60,7 +60,7 @@ def __parse_args():
                         help='Number of steps to print and record the log.')
     parser.add_argument('--val_step', default=5000, type=int,
                         help='Number of steps to run validation.')
-    parser.add_argument('--logger_name', default='runs/runX',
+    parser.add_argument('--log_path', default='runs/runX',
                         help='Path to save the model and Tensorboard log.')
     parser.add_argument('--resume', default='', type=str, metavar='PATH',
                         help='path to latest checkpoint (default: none)')

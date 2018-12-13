@@ -27,7 +27,7 @@ def main():
         return
 
     logging.basicConfig(format='%(asctime)s %(message)s', level=logging.INFO)
-    tb_logger.configure(opt.logger_name, flush_secs=5)
+    tb_logger.configure(opt.log_path, flush_secs=5)
 
     # Load Vocabulary Wrapper
     with open(opt.vocab_path, 'rb') as f:
@@ -38,8 +38,6 @@ def main():
         else:
             opt.vocab_size = vocab.idx
         del vocab
-	#vocab = pickle.load(open(os.path.join(
-    #    opt.vocab_path, '%s_vocab.pkl' % opt.data_name), 'rb'))
     
 
     if CONSTANT.model == 'obj':
@@ -85,7 +83,7 @@ def main():
             train(opt, train_loader, model, epoch, val_loader)
 
             # evaluate on validation set
-            rsum = validate(opt, val_loader, model)
+            rsum = validate_tb(opt, val_loader, model)
 
             # remember best R@ sum and save checkpoint
             is_best = rsum > best_rsum
@@ -96,10 +94,35 @@ def main():
                 'best_rsum': best_rsum,
                 'opt': opt,
                 'Eiters': model.Eiters,
-            }, is_best, prefix=opt.logger_name + '/')
+            }, is_best, prefix=opt.log_path + '/')
+
+        ## write stat to file
+        write_stat_file(opt)
     else:
         # evaluate on validation set
-        rsum = validate(opt, test_loader, model)
+        validate_tb(opt, test_loader, model)
+
+def write_stat_file(opt):
+    # load best model
+    path = os.path.join(opt.log_path, "model_best.pth.tar")
+    checkpoint = torch.load(opt.log_path)
+    model = VSE(opt)
+    model.load_state_dict(checkpoint['model'])
+    epoch = checkpoint['epoch']
+
+    # get loader
+    if CONSTANT.model == 'obj':
+        data = data_obj
+    else:
+        data = data_act
+    
+    train_loader, val_loader = data.get_loaders()
+    test_loader = data.get_test_loader()
+
+    # run validate
+    validate_file(opt, train_loader, model, epoch, os.path.join(opt.log_path, "train.stat"))
+    validate_file(opt, val_loader, model, epoch, os.path.join(opt.log_path, "val.stat"))
+    validate_file(opt, test_loader, model, epoch, os.path.join(opt.log_path, "test.stat"))
 
 
 def train(opt, train_loader, model, epoch, val_loader):
@@ -147,25 +170,39 @@ def train(opt, train_loader, model, epoch, val_loader):
 
         # validate at every val_step
         if model.Eiters % opt.val_step == 0:
-            validate(opt, val_loader, model)
+            validate_tb(opt, val_loader, model)
 
-
-def validate(opt, val_loader, model):
+def validate(opt, data_loader, model):
     # compute the encoding for all the validation images and captions
     img_embs, cap_embs = encode_data(
-        model, val_loader, opt.log_step, logging.info)
+        model, data_loader, opt.log_step, logging.info)
 
     # caption retrieval
     (r1, r5, r10, medr, meanr) = i2t(img_embs, cap_embs, measure=opt.measure)
     logging.info("Image to text: %.1f, %.1f, %.1f, %.1f, %.1f" %
                  (r1, r5, r10, medr, meanr))
     # image retrieval
-    (r1i, r5i, r10i, medri, meanr) = t2i(
+    (r1i, r5i, r10i, medri, meanri) = t2i(
         img_embs, cap_embs, measure=opt.measure)
     logging.info("Text to image: %.1f, %.1f, %.1f, %.1f, %.1f" %
-                 (r1i, r5i, r10i, medri, meanr))
+                 (r1i, r5i, r10i, medri, meanri))
     # sum of recalls to be used for early stopping
-    currscore = r1 + r5 + r10 + r1i + r5i + r10i
+    rsum = r1 + r5 + r10 + r1i + r5i + r10i
+
+    return rsum, r1, r5, r10, medr, meanr, r1i, r5i, r10i, medri, meanri
+
+def validate_file(opt, data_loader, model, epoch, file_path):
+    rsum, r1, r5, r10, medr, meanr, r1i, r5i, r10i, medri, meanri = validate(opt, data_loader, model)
+    log_str =   f'epoch={epoch}\n' \
+                f'r1={r1}\nr5={r5}\nr10={r10}\nmedr={medr}\nmeanr={meanr}\n' \
+                f'r1i={r1i}\nr5i={r5i}\nr10i={r10i}\nmedri={medri}\nmeanri={meanri}\n' \
+                f'rsum={currscore}'
+        
+    with open(file_path, 'w') as f:
+        f.write(log_str)
+
+def validate_tb(opt, data_loader, model):
+    rsum, r1, r5, r10, medr, meanr, r1i, r5i, r10i, medri, meanri = validate(opt, data_loader, model)
 
     # record metrics in tensorboard
     tb_logger.log_value('r1', r1, step=model.Eiters)
@@ -177,10 +214,10 @@ def validate(opt, val_loader, model):
     tb_logger.log_value('r5i', r5i, step=model.Eiters)
     tb_logger.log_value('r10i', r10i, step=model.Eiters)
     tb_logger.log_value('medri', medri, step=model.Eiters)
-    tb_logger.log_value('meanr', meanr, step=model.Eiters)
-    tb_logger.log_value('rsum', currscore, step=model.Eiters)
+    tb_logger.log_value('meanri', meanri, step=model.Eiters)
+    tb_logger.log_value('rsum', rsum, step=model.Eiters)
 
-    return currscore
+    return rsum
 
 
 def save_checkpoint(state, is_best, filename='checkpoint.pth.tar', prefix=''):

@@ -106,10 +106,8 @@ def get_vtt_loader(cap_pkl, feature, batch_size=100, shuffle=True, num_workers=2
 
 def get_loaders():
     dpath = CONSTANT.data_path
-    # if opt.data_name.endswith("vtt"):
     train_caption_pkl_path = os.path.join(dpath, CONSTANT.cap_train_path)
     val_caption_pkl_path = os.path.join(dpath, CONSTANT.cap_val_path)
-    # feature_path = dpath
     train_loader = get_vtt_loader(
         train_caption_pkl_path, dpath, CONSTANT.batch_size, True, CONSTANT.workers, drop_last=True
     )
@@ -123,7 +121,6 @@ def get_loaders():
 def get_test_loader():
     dpath = CONSTANT.data_path
 
-    # if opt.data_name.endswith("vtt"):
     test_caption_pkl_path = os.path.join(dpath, CONSTANT.cap_test_path)
     test_loader = get_vtt_loader(
         test_caption_pkl_path, dpath, CONSTANT.batch_size, True, CONSTANT.workers
