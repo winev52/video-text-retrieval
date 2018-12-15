@@ -63,9 +63,14 @@ def _create_files(split, in_file, vocab_file, output_dir, cpv):
     # create split
     train, val, test = create_split(data, split, cpv)
 
-    np.save(path.join(output_dir, 'train.npy'), train)
-    np.save(path.join(output_dir, 'val.npy'), val)
-    np.save(path.join(output_dir, 'test.npy'), test)
+    if len(train) > 0:
+        np.save(path.join(output_dir, 'train.npy'), train)
+
+    if len(val) > 0:
+        np.save(path.join(output_dir, 'val.npy'), val)
+
+    if len(test) > 0:
+        np.save(path.join(output_dir, 'test.npy'), test)
 
 def main():
     parser = argparse.ArgumentParser()

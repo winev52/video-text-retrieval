@@ -23,6 +23,8 @@ def main():
         'learning_rate': np.logspace(-1, -5, 5, dtype=float)
     }
 
+    o_log_path = CONSTANT.log_path
+
     for p in product_dict(**params):
         CONSTANT.cpv = p['cpv']
         CONSTANT.margin = p['margin'].item()
@@ -30,9 +32,10 @@ def main():
         CONSTANT.embed_size = p['embed_size'].item()
         CONSTANT.learning_rate = p['learning_rate'].item()
         
-        log_path =  f'runs/{CONSTANT.model}cpv{CONSTANT.cpv}m{CONSTANT.cpv}'\
+        log_path =  os.path.join(o_log_path,
+                    f'{CONSTANT.model}cpv{CONSTANT.cpv}m{CONSTANT.cpv}'\
                     f'wc{CONSTANT.weight_decay}wd100es{CONSTANT.embed_size}'\
-                    f'lr{CONSTANT.learning_rate}'
+                    f'lr{CONSTANT.learning_rate}')
 
         # if the config is run, ignore it
         if os.path.isdir(log_path):
@@ -40,9 +43,9 @@ def main():
 
         CONSTANT.log_path = log_path
 
-        CONSTANT.cap_train_path = f'cpv{CONSTANT.cpv}/train.npy'
-        CONSTANT.cap_val_path = f'cpv{CONSTANT.cpv}/val.npy'
-        CONSTANT.cap_test_path = f'cpv{CONSTANT.cpv}/test.npy'
+        CONSTANT.cap_train_path = f'cpv{CONSTANT.cpv}_jmet_glove/train.npy'
+        CONSTANT.cap_val_path = f'cpv{CONSTANT.cpv}_jmet_glove/val.npy'
+        CONSTANT.cap_test_path = f'cpv{CONSTANT.cpv}_jmet_glove/test.npy'
 
         train_vtt.main()
 
