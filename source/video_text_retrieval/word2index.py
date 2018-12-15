@@ -84,9 +84,9 @@ def main():
     parser.add_argument('--cpv', default=20, type=int,
                         help='captions per video')
 
-    opt = parser.parse_args()
-    print(opt)
-    _create_files([opt.train, opt.val, opt.test], opt.input, opt.vocab, opt.output, opt.cpv)
+    args = parser.parse_args()
+    print(args)
+    _create_files([args.train, args.val, args.test], args.input, args.vocab, args.output, args.cpv)
 
     return 0
 

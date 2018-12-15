@@ -299,7 +299,7 @@ class VSE(object):
 
         # self.optimizer = torch.optim.Adam(params, lr=opt.learning_rate)
         # self.optimizer = torch.optim.RMSprop(params, lr=opt.learning_rate, weight_decay=1e-8)
-        self.optimizer = torch.optim.RMSprop(params, lr=opt.learning_rate)
+        self.optimizer = torch.optim.RMSprop(params, lr=opt.learning_rate, weight_decay=opt.weight_decay)
         self.Eiters = 0
 
     def state_dict(self):

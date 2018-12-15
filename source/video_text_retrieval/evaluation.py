@@ -130,13 +130,9 @@ def evalrank():
     """
     cpv = CONSTANT.cpv  # caps per video
 
-    # load vocabulary used by the model
-    vocab = pickle.load(open(os.path.join(CONSTANT.vocab_path, "vocab.pkl"), "rb"))
-
     # construct model resnet
     checkpoint = torch.load(CONSTANT.model_path1)
     opt = checkpoint["opt"]
-    opt.vocab_size = len(vocab)
 
     model = VSE(opt)
     start_epoch = checkpoint['epoch']
@@ -155,7 +151,6 @@ def evalrank():
     # construct model i3d-audio
     checkpoint = torch.load(CONSTANT.model_path2)
     opt = checkpoint["opt"]
-    opt.vocab_size = len(vocab)
 
     model = VSE(opt)
     start_epoch = checkpoint['epoch']

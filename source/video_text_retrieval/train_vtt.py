@@ -19,24 +19,24 @@ from constant import CONSTANT
 
 
 def main():
-    opt = CONSTANT
-    print(opt)
+    print(CONSTANT)
 
     if CONSTANT.mode == 'test' and CONSTANT.model == 'both':
         evalrank()
         return
 
     logging.basicConfig(format='%(asctime)s %(message)s', level=logging.INFO)
-    tb_logger.configure(opt.log_path, flush_secs=5)
-
+    tb_logger.unconfigure()
+    tb_logger.configure(CONSTANT.log_path, flush_secs=5)
+    
     # Load Vocabulary Wrapper
-    with open(opt.vocab_path, 'rb') as f:
+    with open(CONSTANT.vocab_path, 'rb') as f:
         vocab = pickle.load(f)
         # dict or Vocabulary
         if isinstance(vocab, dict):
-            opt.vocab_size = len(vocab)
+            CONSTANT.vocab_size = len(vocab)
         else:
-            opt.vocab_size = vocab.idx
+            CONSTANT.vocab_size = vocab.idx
         del vocab
     
 
@@ -52,38 +52,38 @@ def main():
         test_loader = data.get_test_loader()
 
     # Construct the model
-    model = VSE(opt)
+    model = VSE(CONSTANT)
 
     # optionally resume from a checkpoint
     start_epoch = 0
-    end_epoch = opt.num_epochs
+    end_epoch = CONSTANT.num_epochs
     best_rsum = 0
-    if opt.resume:
-        if os.path.isfile(opt.resume):
-            print("=> loading checkpoint '{}'".format(opt.resume))
-            checkpoint = torch.load(opt.resume)
+    if CONSTANT.resume:
+        if os.path.isfile(CONSTANT.resume):
+            print("=> loading checkpoint '{}'".format(CONSTANT.resume))
+            checkpoint = torch.load(CONSTANT.resume)
             start_epoch = checkpoint['epoch']
-            end_epoch = start_epoch + opt.num_epochs
+            end_epoch = start_epoch + CONSTANT.num_epochs
             best_rsum = checkpoint['best_rsum']
             model.load_state_dict(checkpoint['model'])
             # Eiters is used to show logs as the continuation of another
             # training
             model.Eiters = checkpoint['Eiters']
             print("=> loaded checkpoint '{}' (epoch {}, best_rsum {})"
-                  .format(opt.resume, start_epoch, best_rsum))
+                  .format(CONSTANT.resume, start_epoch, best_rsum))
         else:
-            print("=> no checkpoint found at '{}'".format(opt.resume))
+            print("=> no checkpoint found at '{}'".format(CONSTANT.resume))
 
     if CONSTANT.mode == 'train':
         # Train the Model
         for epoch in range(start_epoch, end_epoch):
-            adjust_learning_rate(opt, model.optimizer, epoch)
+            adjust_learning_rate(model.optimizer, epoch)
 
             # train for one epoch
-            train(opt, train_loader, model, epoch, val_loader)
+            train(train_loader, model, epoch, val_loader)
 
             # evaluate on validation set
-            rsum = validate_tb(opt, val_loader, model)
+            rsum = validate_tb(val_loader, model)
 
             # remember best R@ sum and save checkpoint
             is_best = rsum > best_rsum
@@ -92,21 +92,21 @@ def main():
                 'epoch': epoch + 1,
                 'model': model.state_dict(),
                 'best_rsum': best_rsum,
-                'opt': opt,
+                'opt': CONSTANT,
                 'Eiters': model.Eiters,
-            }, is_best, prefix=opt.log_path + '/')
+            }, is_best, prefix=CONSTANT.log_path + '/')
 
         ## write stat to file
-        write_stat_file(opt)
+        write_stat_file()
     else:
         # evaluate on validation set
-        validate_tb(opt, test_loader, model)
+        validate_tb(test_loader, model)
 
-def write_stat_file(opt):
+def write_stat_file():
     # load best model
-    path = os.path.join(opt.log_path, "model_best.pth.tar")
-    checkpoint = torch.load(opt.log_path)
-    model = VSE(opt)
+    path = os.path.join(CONSTANT.log_path, "model_best.pth.tar")
+    checkpoint = torch.load(path)
+    model = VSE(checkpoint['opt'])
     model.load_state_dict(checkpoint['model'])
     epoch = checkpoint['epoch']
 
@@ -120,12 +120,12 @@ def write_stat_file(opt):
     test_loader = data.get_test_loader()
 
     # run validate
-    validate_file(opt, train_loader, model, epoch, os.path.join(opt.log_path, "train.stat"))
-    validate_file(opt, val_loader, model, epoch, os.path.join(opt.log_path, "val.stat"))
-    validate_file(opt, test_loader, model, epoch, os.path.join(opt.log_path, "test.stat"))
+    validate_file(train_loader, model, epoch, os.path.join(CONSTANT.log_path, "train.stat"))
+    validate_file(val_loader, model, epoch, os.path.join(CONSTANT.log_path, "val.stat"))
+    validate_file(test_loader, model, epoch, os.path.join(CONSTANT.log_path, "test.stat"))
 
 
-def train(opt, train_loader, model, epoch, val_loader):
+def train(train_loader, model, epoch, val_loader):
     # average meters to record the training statistics
     batch_time = AverageMeter()
     data_time = AverageMeter()
@@ -150,7 +150,7 @@ def train(opt, train_loader, model, epoch, val_loader):
         end = time.time()
 
         # Print log info
-        if model.Eiters % opt.log_step == 0:
+        if model.Eiters % CONSTANT.log_step == 0:
             # print(model.params)
             logging.info(
                 'Epoch: [{0}][{1}/{2}]\t'
@@ -169,21 +169,21 @@ def train(opt, train_loader, model, epoch, val_loader):
         model.logger.tb_log(tb_logger, step=model.Eiters)
 
         # validate at every val_step
-        if model.Eiters % opt.val_step == 0:
-            validate_tb(opt, val_loader, model)
+        if model.Eiters % CONSTANT.val_step == 0:
+            validate_tb(val_loader, model)
 
-def validate(opt, data_loader, model):
+def validate(data_loader, model):
     # compute the encoding for all the validation images and captions
     img_embs, cap_embs = encode_data(
-        model, data_loader, opt.log_step, logging.info)
+        model, data_loader, CONSTANT.log_step, logging.info)
 
     # caption retrieval
-    (r1, r5, r10, medr, meanr) = i2t(img_embs, cap_embs, measure=opt.measure)
+    (r1, r5, r10, medr, meanr) = i2t(img_embs, cap_embs, measure=CONSTANT.measure)
     logging.info("Image to text: %.1f, %.1f, %.1f, %.1f, %.1f" %
                  (r1, r5, r10, medr, meanr))
     # image retrieval
     (r1i, r5i, r10i, medri, meanri) = t2i(
-        img_embs, cap_embs, measure=opt.measure)
+        img_embs, cap_embs, measure=CONSTANT.measure)
     logging.info("Text to image: %.1f, %.1f, %.1f, %.1f, %.1f" %
                  (r1i, r5i, r10i, medri, meanri))
     # sum of recalls to be used for early stopping
@@ -191,18 +191,18 @@ def validate(opt, data_loader, model):
 
     return rsum, r1, r5, r10, medr, meanr, r1i, r5i, r10i, medri, meanri
 
-def validate_file(opt, data_loader, model, epoch, file_path):
-    rsum, r1, r5, r10, medr, meanr, r1i, r5i, r10i, medri, meanri = validate(opt, data_loader, model)
+def validate_file(data_loader, model, epoch, file_path):
+    rsum, r1, r5, r10, medr, meanr, r1i, r5i, r10i, medri, meanri = validate(data_loader, model)
     log_str =   f'epoch={epoch}\n' \
                 f'r1={r1}\nr5={r5}\nr10={r10}\nmedr={medr}\nmeanr={meanr}\n' \
                 f'r1i={r1i}\nr5i={r5i}\nr10i={r10i}\nmedri={medri}\nmeanri={meanri}\n' \
-                f'rsum={currscore}'
+                f'rsum={rsum}'
         
     with open(file_path, 'w') as f:
         f.write(log_str)
 
-def validate_tb(opt, data_loader, model):
-    rsum, r1, r5, r10, medr, meanr, r1i, r5i, r10i, medri, meanri = validate(opt, data_loader, model)
+def validate_tb(data_loader, model):
+    rsum, r1, r5, r10, medr, meanr, r1i, r5i, r10i, medri, meanri = validate(data_loader, model)
 
     # record metrics in tensorboard
     tb_logger.log_value('r1', r1, step=model.Eiters)
@@ -226,10 +226,10 @@ def save_checkpoint(state, is_best, filename='checkpoint.pth.tar', prefix=''):
         shutil.copyfile(prefix + filename, prefix + 'model_best.pth.tar')
 
 
-def adjust_learning_rate(opt, optimizer, epoch):
+def adjust_learning_rate(optimizer, epoch):
     """Sets the learning rate to the initial LR
        decayed by 10 every 30 epochs"""
-    lr = opt.learning_rate * (0.5 ** (epoch // opt.lr_update))
+    lr = CONSTANT.learning_rate * (0.5 ** (epoch // CONSTANT.lr_update))
     for param_group in optimizer.param_groups:
         param_group['lr'] = lr
 

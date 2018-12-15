@@ -32,11 +32,13 @@ def __parse_args():
                         help='Path to saved vocabulary pickle files.')
     parser.add_argument('--margin', default=0.2, type=float,
                         help='Rank loss margin.')
-    parser.add_argument('--num_epochs', default=30, type=int,
+    parser.add_argument('--weight_decay', default=1e-10, type=float,
+                        help='weight decay loss.')
+    parser.add_argument('--num_epochs', default=40, type=int,
                         help='Number of training epochs.')
     parser.add_argument('--batch_size', default=128, type=int,
                         help='Size of a training mini-batch.')
-    parser.add_argument('--word_dim', default=300, type=int,
+    parser.add_argument('--word_dim', default=100, type=int,
                         help='Dimensionality of the word embedding.')
     parser.add_argument('--word2vec_path', default='../../data/glove.twitter.100d.npy', type=str,
                         help='The path of weights of word embeding in npy format')
@@ -46,13 +48,11 @@ def __parse_args():
                         help='Dimensionality of the joint embedding.')
     parser.add_argument('--grad_clip', default=2., type=float,
                         help='Gradient clipping threshold.')
-    parser.add_argument('--crop_size', default=224, type=int,
-                        help='Size of an image crop as the CNN input.')
     parser.add_argument('--num_layers', default=1, type=int,
                         help='Number of GRU layers.')
     parser.add_argument('--learning_rate', default=.0002, type=float,
                         help='Initial learning rate.')
-    parser.add_argument('--lr_update', default=10, type=int,
+    parser.add_argument('--lr_update', default=8, type=int,
                         help='Number of epochs to update the learning rate.')
     parser.add_argument('--workers', default=10, type=int,
                         help='Number of data loader workers.')
