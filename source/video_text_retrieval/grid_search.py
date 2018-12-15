@@ -43,9 +43,9 @@ def main():
 
         CONSTANT.log_path = log_path
 
-        CONSTANT.cap_train_path = f'cpv{CONSTANT.cpv}_jmet_glove/train.npy'
-        CONSTANT.cap_val_path = f'cpv{CONSTANT.cpv}_jmet_glove/val.npy'
-        CONSTANT.cap_test_path = f'cpv{CONSTANT.cpv}_jmet_glove/test.npy'
+        CONSTANT.cap_train_path = 'cpv{}_jmet_glove/train.npy'.format(CONSTANT.cpv)
+        CONSTANT.cap_val_path = 'cpv{}_jmet_glove/val.npy'.format(CONSTANT.cpv)
+        CONSTANT.cap_test_path = 'cpv{}_jmet_glove/test.npy'.format(CONSTANT.cpv)
 
         train_vtt.main()
 
