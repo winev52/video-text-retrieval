@@ -33,9 +33,9 @@ def main():
         CONSTANT.learning_rate = p['learning_rate'].item()
         
         log_path =  os.path.join(o_log_path,
-                    f'{CONSTANT.model}cpv{CONSTANT.cpv}m{CONSTANT.cpv}'\
-                    f'wc{CONSTANT.weight_decay}wd100es{CONSTANT.embed_size}'\
-                    f'lr{CONSTANT.learning_rate}')
+                    '{}cpv{}m{}wc{}wd100es{}lr{}'.format(CONSTANT.model, 
+                    CONSTANT.cpv, CONSTANT.cpv, CONSTANT.weight_decay, 
+                    CONSTANT.embed_size, CONSTANT.learning_rate))
 
         # if the config is run, ignore it
         if os.path.isdir(log_path):

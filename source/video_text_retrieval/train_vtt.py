@@ -193,10 +193,9 @@ def validate(data_loader, model):
 
 def validate_file(data_loader, model, epoch, file_path):
     rsum, r1, r5, r10, medr, meanr, r1i, r5i, r10i, medri, meanri = validate(data_loader, model)
-    log_str =   f'epoch={epoch}\n' \
-                f'r1={r1}\nr5={r5}\nr10={r10}\nmedr={medr}\nmeanr={meanr}\n' \
-                f'r1i={r1i}\nr5i={r5i}\nr10i={r10i}\nmedri={medri}\nmeanri={meanri}\n' \
-                f'rsum={rsum}'
+    log_str =   'epoch={}\nrsum={}\nr1={}\nr5={}\nr10={}\nmedr={}\nmeanr={}\n' \
+                'r1i={}\nr5i={}\nr10i={}\nmedri={}\nmeanri={}\n'.format(
+                    epoch, rsum, r1, r5, r10, medr, meanr, r1i, r5i, r10i, medri, meanri)
         
     with open(file_path, 'w') as f:
         f.write(log_str)
