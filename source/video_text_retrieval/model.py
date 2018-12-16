@@ -31,7 +31,7 @@ class EncoderImage(nn.Module):
         # self.a1 = nn.LeakyReLU()
         # self.fc2 = nn.Linear(embed_size*2, embed_size)
 
-        self.init_weights()
+        # self.init_weights()
 
     def init_weights(self):
         """Xavier initialization for the fully connected layer
@@ -66,17 +66,17 @@ class EncoderImage(nn.Module):
 
         return features
 
-    def load_state_dict(self, state_dict):
-        """Copies parameters. overwritting the default one to
-        accept state_dict from Full model
-        """
-        own_state = self.state_dict()
-        new_state = OrderedDict()
-        for name, param in state_dict.items():
-            if name in own_state:
-                new_state[name] = param
+    # def load_state_dict(self, state_dict):
+    #     """Copies parameters. overwritting the default one to
+    #     accept state_dict from Full model
+    #     """
+    #     own_state = self.state_dict()
+    #     new_state = OrderedDict()
+    #     for name, param in state_dict.items():
+    #         if name in own_state:
+    #             new_state[name] = param
 
-        super(EncoderImage, self).load_state_dict(new_state)
+    #     super(EncoderImage, self).load_state_dict(new_state)
 
 
 
@@ -98,7 +98,7 @@ class EncoderText(nn.Module):
 
         # self.fc = nn.Linear(embed_size*2, embed_size)
 
-        self.init_weights()
+        # self.init_weights()
 
     def init_weights(self):
         pass
@@ -297,13 +297,19 @@ class VSE(object):
         params = filter(lambda p: p.requires_grad, params)
         self.params = params
 
-        # self.optimizer = torch.optim.Adam(params, lr=opt.learning_rate)
+        self.optimizer = torch.optim.Adam(params, lr=opt.learning_rate, weight_decay=opt.weight_decay)
         # self.optimizer = torch.optim.RMSprop(params, lr=opt.learning_rate, weight_decay=1e-8)
-        self.optimizer = torch.optim.RMSprop(params, lr=opt.learning_rate, weight_decay=opt.weight_decay)
+        # self.optimizer = torch.optim.RMSprop(params, lr=opt.learning_rate, weight_decay=opt.weight_decay)
         self.Eiters = 0
 
     def state_dict(self):
-        state_dict = [self.img_enc.state_dict(), self.txt_enc.state_dict()]
+        # remove pretrain weights
+        txt_untrainable_param = [name for name, param in self.txt_enc.named_parameters() if not param.requires_grad]
+        txt_state_dict = self.txt_enc.state_dict()
+        for name in txt_untrainable_param:
+            txt_state_dict.pop(name)
+
+        state_dict = [self.img_enc.state_dict(), txt_state_dict]
         return state_dict
 
     def load_state_dict(self, state_dict):
