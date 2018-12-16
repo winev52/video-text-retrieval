@@ -314,7 +314,7 @@ class VSE(object):
 
     def load_state_dict(self, state_dict):
         self.img_enc.load_state_dict(state_dict[0])
-        self.txt_enc.load_state_dict(state_dict[1])
+        self.txt_enc.load_state_dict(state_dict[1], strict=False)
 
     def train_start(self):
         """switch to train mode
