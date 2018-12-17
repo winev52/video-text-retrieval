@@ -5,7 +5,6 @@ from constant import CONSTANT
 import numpy as np
 import os
 
-
 def product_dict(**kwargs):
     keys = kwargs.keys()
     vals = kwargs.values()
@@ -16,7 +15,7 @@ def main():
     params = {
         'cpv': [20],
         'margin': np.linspace(0, 1, 6),
-        'weight_decay': [0, *np.logspace(-8, -12, 3)],
+        'weight_decay': [0, *np.logspace(-8, -16, 3)],
         # 'word_dim': [50, 100, 200, 300],
         # 'word2vec_path': [""],
         'embed_size': np.linspace(256, 1536, 6, dtype=int),
@@ -34,7 +33,7 @@ def main():
         
         log_path =  os.path.join(o_log_path,
                     '{}cpv{}m{}wc{}wd100es{}lr{}'.format(CONSTANT.model, 
-                    CONSTANT.cpv, CONSTANT.cpv, CONSTANT.weight_decay, 
+                    CONSTANT.cpv, CONSTANT.margin, CONSTANT.weight_decay, 
                     CONSTANT.embed_size, CONSTANT.learning_rate))
 
         # if the config is run, ignore it
