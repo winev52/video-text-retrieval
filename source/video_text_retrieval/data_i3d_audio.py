@@ -1,7 +1,9 @@
+import os
+
+import numpy as np
 import torch
 import torch.utils.data as data
-import numpy as np
-import os
+
 from constant import CONSTANT
 
 
@@ -15,18 +17,24 @@ class VTTDataset(data.Dataset):
     Provide text and video npy features, and return data based on caption's id
     """
 
-    def __init__(self, cap_pkl, vid_feature_dir):
-        # with open(cap_pkl, 'rb') as f:
-        #     self.captions, self.lengths, self.video_ids = pickle.load(f)
-        data = np.load(cap_pkl)
-        path = os.path.join(vid_feature_dir, CONSTANT.rbgi3d_path)
-        data = np.array([r for r in data if os.path.isfile(os.path.join(path, str(r[0]) + ".npy"))])
+    def __init__(self, data_dir=CONSTANT.data_path, np_cap=CONSTANT.cap_train_path,
+                rgbi3d_path=CONSTANT.rgbi3d_path, soundnet_path=CONSTANT.soundnet_path, 
+                flowi3d_path=CONSTANT.flowi3d_path):
+
+        data = np.load(os.path.join(data_dir, np_cap))
+        rgbi3d_path = os.path.join(data_dir, rgbi3d_path)
+        soundnet_path = os.path.join(data_dir, soundnet_path)
+        flowi3d_path = os.path.join(data_dir, flowi3d_path)
+
+        # check availability of feature files
+        data = np.array([r for r in data if os.path.isfile(os.path.join(rgbi3d_path, str(r[0]) + ".npy"))])
 
         self.video_ids = data[:, 0]
         self.captions = [torch.from_numpy(x) for x in data[:, 1]]
 
-        # imfeat_file = os.path.join(feature_file, data_name)
-        self.vid_feat_dir = vid_feature_dir
+        self.rgbi3d_path = rgbi3d_path
+        self.soundnet_path = soundnet_path
+        self.flowi3d_path = flowi3d_path
 
     def __getitem__(self, index):
         """
@@ -34,28 +42,31 @@ class VTTDataset(data.Dataset):
         According to the caption to find the corresponding video, so the need for video storage is in accordance with the id ascending order
         """
         caption = self.captions[index]
-        # length = self.lengths[index]
         video_id = self.video_ids[index]
-        vid_feat_dir = self.vid_feat_dir
 
+        features = []
         # activity (i3d) feature
-        path1 = os.path.join(vid_feat_dir, CONSTANT.rbgi3d_path, str(video_id) + ".npy")
-        video_feat = torch.from_numpy(np.load(path1))
-        # video_feat = video_feat.mean(dim=0, keepdim=False)
+        rgbi3d_file = os.path.join(self.rgbi3d_path, str(video_id) + ".npy")
+        rgbi3d_feature = torch.from_numpy(np.load(rgbi3d_file))
+        features.append(rgbi3d_feature)
 
         # audio (soundnet) Feature
-        audio_feat_file = os.path.join(vid_feat_dir, CONSTANT.soundnet_path, str(video_id) + ".npy")
-        # audio_h5 = h5py.File(audio_feat_file, "r")
-        # audio_feat = audio_h5["layer24"][()]
-
-        if os.path.isfile(audio_feat_file):
-            audio_feat = torch.from_numpy(np.load(audio_feat_file))
+        soundnet_file = os.path.join(self.soundnet_path, str(video_id) + ".npy")
+        if os.path.isfile(soundnet_file): # some video has no sound
+            soundnet_feature = torch.from_numpy(np.load(soundnet_file))
         else:
-            audio_feat = torch.zeros(1024)
-        # audio_feat = audio_feat.mean(dim=1, keepdim=False)
-        video_feat = torch.cat([video_feat, audio_feat])
+            soundnet_feature = torch.zeros(1024)
+        features.append(soundnet_feature)
 
-        return video_feat, caption, index, video_id
+        # flow i3d feature
+        if isinstance(self.flowi3d_path, str):
+            flowi3d_file = os.path.join(self.flowi3d_path, str(video_id) + ".npy")
+            flowi3d_feature = torch.from_numpy(np.load(flowi3d_file))
+            features.append(flowi3d_feature)
+
+        vid_feature = torch.cat(features)
+
+        return vid_feature, caption, index, video_id
 
     def __len__(self):
         return len(self.captions)
@@ -90,8 +101,8 @@ def collate_fn(data):
     return images, targets, lengths, ids
 
 
-def get_vtt_loader(cap_pkl, feature, batch_size=100, shuffle=True, num_workers=2, drop_last=False):
-    v2t = VTTDataset(cap_pkl, feature)
+def get_vtt_loader(np_cap, batch_size=100, shuffle=True, num_workers=2, drop_last=False):
+    v2t = VTTDataset(np_cap=np_cap)
     data_loader = torch.utils.data.DataLoader(
         dataset=v2t,
         batch_size=batch_size,
@@ -105,25 +116,19 @@ def get_vtt_loader(cap_pkl, feature, batch_size=100, shuffle=True, num_workers=2
 
 
 def get_loaders():
-    dpath = CONSTANT.data_path
-    train_caption_pkl_path = os.path.join(dpath, CONSTANT.cap_train_path)
-    val_caption_pkl_path = os.path.join(dpath, CONSTANT.cap_val_path)
     train_loader = get_vtt_loader(
-        train_caption_pkl_path, dpath, CONSTANT.batch_size, True, CONSTANT.workers, drop_last=True
+        CONSTANT.cap_train_path, CONSTANT.batch_size, True, CONSTANT.workers, drop_last=True
     )
     val_loader = get_vtt_loader(
-        val_caption_pkl_path, dpath, CONSTANT.batch_size, False, CONSTANT.workers
+        CONSTANT.cap_val_path, CONSTANT.batch_size, False, CONSTANT.workers
     )
 
     return train_loader, val_loader
 
 
 def get_test_loader():
-    dpath = CONSTANT.data_path
-
-    test_caption_pkl_path = os.path.join(dpath, CONSTANT.cap_test_path)
     test_loader = get_vtt_loader(
-        test_caption_pkl_path, dpath, CONSTANT.batch_size, True, CONSTANT.workers
+        CONSTANT.cap_test_path, CONSTANT.batch_size, True, CONSTANT.workers
     )
 
     return test_loader

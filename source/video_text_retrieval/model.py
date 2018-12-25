@@ -21,13 +21,13 @@ def l2norm(X):
 # We consider Image feature is precomputed
 class EncoderImage(nn.Module):
 
-    def __init__(self, img_dim, embed_size, use_abs=False, no_imgnorm=False):
+    def __init__(self, input_dim, embed_size, use_abs=False, no_imgnorm=False):
         super(EncoderImage, self).__init__()
         self.embed_size = embed_size
         self.no_imgnorm = no_imgnorm
         self.use_abs = use_abs
 
-        self.fc1 = nn.Linear(img_dim, embed_size)
+        self.fc1 = nn.Linear(input_dim, embed_size)
         # self.a1 = nn.LeakyReLU()
         # self.fc2 = nn.Linear(embed_size*2, embed_size)
 
@@ -266,7 +266,7 @@ class VSE(object):
         # tutorials/09 - Image Captioning
         # Build Models
         self.grad_clip = opt.grad_clip
-        self.img_enc = EncoderImage(opt.img_dim, opt.embed_size,
+        self.img_enc = EncoderImage(opt.input_dim, opt.embed_size,
                                     use_abs=opt.use_abs,
                                     no_imgnorm=opt.no_imgnorm)
         self.txt_enc = EncoderText(opt.vocab_size, opt.word_dim,

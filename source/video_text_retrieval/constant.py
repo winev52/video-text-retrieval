@@ -22,17 +22,19 @@ def __parse_args():
                         help='path to npy file of caption of test set')
     parser.add_argument('--resnet_path', default='resnet',
                         help='resnet feature dir relative to data_path')
-    parser.add_argument('--rbgi3d_path', default='rgb_i3d',
+    parser.add_argument('--rgbi3d_path', default='rgb_i3d',
                         help='i3d feature dir relative to data_path')
     parser.add_argument('--soundnet_path', default='soundnet',
                         help='soundnet feature dir relative to data_path')
+    parser.add_argument('--flowi3d_path', default='flow_i3d',
+                        help='optical flow I3D feature dir relative to data_path')
     parser.add_argument('--finetune', default=False, type=bool,
                         help='fine tune the the pre-train model. NOT AVAILABLE YET')
     parser.add_argument('--vocab_path', default='../../data/glove.twitter.100d.pkl',
                         help='Path to saved vocabulary pickle files.')
     parser.add_argument('--margin', default=0.2, type=float,
                         help='Rank loss margin.')
-    parser.add_argument('--weight_decay', default=1e-10, type=float,
+    parser.add_argument('--weight_decay', default=1e-16, type=float,
                         help='weight decay loss.')
     parser.add_argument('--num_epochs', default=40, type=int,
                         help='Number of training epochs.')
@@ -66,8 +68,8 @@ def __parse_args():
                         help='path to latest checkpoint (default: none)')
     parser.add_argument('--max_violation', action='store_true',
                         help='Use max instead of sum in the rank loss.')
-    parser.add_argument('--img_dim', default=2048, type=int,
-                        help='Dimensionality of the image embedding.')
+    parser.add_argument('--input_dim', default=2048, type=int,
+                        help='Dimensionality of the input. 2048 or 3072.')
     parser.add_argument('--measure', default='cosine',
                         help='Similarity measure used (cosine|order)')
     parser.add_argument('--use_abs', action='store_true',

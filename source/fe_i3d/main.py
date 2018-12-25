@@ -28,6 +28,7 @@ tf.flags.DEFINE_string('model', 'rgb_imagenet', 'rgb, rgb600, rgb_imagenet, flow
 tf.flags.DEFINE_string('in_dir', _IN_DIR, 'dir of input videos')
 tf.flags.DEFINE_string('out_dir', _OUT_DIR, 'dir of output features')
 tf.flags.DEFINE_integer('batch_size', _BATCH_SIZE, 'batch size')
+tf.flags.DEFINE_boolean('overwrite', False, 'overwrite if exist, otherwise, ignore')
 tf.logging.set_verbosity(tf.logging.INFO)
 _FLAGS = tf.flags.FLAGS
 
@@ -150,12 +151,18 @@ def _get_flow_model(model_name, video_ids):
     return flow_features, vid, iterator, file_names_placeholder, variable_map
 
 def _get_video_ids():
+    out_dir = _FLAGS.out_dir
+    in_dir = _FLAGS.in_dir
+    overwrite = _FLAGS.overwrite
+
     with open(_CAPS_PATH, 'rb') as f:
         np_data = pickle.load(f)
         video_ids = np_data[:,0]
         video_ids = np.unique(video_ids)
 
-    video_ids = np.array([vid for vid in video_ids if path.isfile(path.join(_FLAGS.in_dir, vid +".avi"))])
+    video_ids = np.array([vid for vid in video_ids 
+                        if path.isfile(path.join(in_dir, vid +".avi"))
+                        and not (overwrite and path.isfile(path.join(out_dir, vid + ".npy")))])
 
     return video_ids
 
