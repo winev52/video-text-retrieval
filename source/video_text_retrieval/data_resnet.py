@@ -37,14 +37,11 @@ class VTTDataset(data.Dataset):
         According to the caption to find the corresponding video, so the need for video storage is in accordance with the id ascending order
         """
         caption = self.captions[index]
-        # length = self.lengths[index]
         video_id = self.video_ids[index]
         vid_feat_dir = self.vid_feat_dir
 
         path = os.path.join(vid_feat_dir, CONSTANT.resnet_path, str(video_id) + ".npy")
         video_feat = torch.from_numpy(np.load(path))
-        # video_feat = video_feat.mean(dim=0, keepdim=False)  #  average pooling
-        video_feat = video_feat.float()
 
         return video_feat, caption, index, video_id
 

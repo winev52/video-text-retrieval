@@ -32,7 +32,7 @@ def main():
         CONSTANT.learning_rate = p['learning_rate'].item()
         
         log_path =  os.path.join(o_log_path,
-                    '{}cpv{}m{{:.1f}}wc{}wd100es{}lr{}'.format(CONSTANT.model, 
+                    '{}cpv{}m{:.1f}wc{}wd100es{}lr{}'.format(CONSTANT.model, 
                     CONSTANT.cpv, CONSTANT.margin, CONSTANT.weight_decay, 
                     CONSTANT.embed_size, CONSTANT.learning_rate))
 
