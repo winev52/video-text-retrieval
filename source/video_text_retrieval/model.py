@@ -27,6 +27,7 @@ class EncoderImage(nn.Module):
         self.no_imgnorm = no_imgnorm
         self.use_abs = use_abs
 
+        self.dropout = nn.Dropout(p=0.25)
         self.fc1 = nn.Linear(input_dim, embed_size)
         # self.a1 = nn.LeakyReLU()
         # self.fc2 = nn.Linear(embed_size*2, embed_size)
@@ -52,7 +53,8 @@ class EncoderImage(nn.Module):
         """Extract image feature vectors."""
         # assuming that the precomputed features are already l2-normalized
 
-        features = self.fc1(images)
+        features = self.dropout(images)
+        features = self.fc1(features)
         # features = self.a1(features)
         # features = self.fc2(features)
 

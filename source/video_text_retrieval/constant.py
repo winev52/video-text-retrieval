@@ -34,7 +34,7 @@ def __parse_args():
                         help='Path to saved vocabulary pickle files.')
     parser.add_argument('--margin', default=0.2, type=float,
                         help='Rank loss margin.')
-    parser.add_argument('--weight_decay', default=1e-16, type=float,
+    parser.add_argument('--weight_decay', default=0, type=float,
                         help='weight decay loss.')
     parser.add_argument('--num_epochs', default=40, type=int,
                         help='Number of training epochs.')
@@ -56,11 +56,11 @@ def __parse_args():
                         help='Initial learning rate.')
     parser.add_argument('--lr_update', default=8, type=int,
                         help='Number of epochs to update the learning rate.')
-    parser.add_argument('--workers', default=10, type=int,
+    parser.add_argument('--workers', default=2, type=int,
                         help='Number of data loader workers.')
     parser.add_argument('--log_step', default=10, type=int,
                         help='Number of steps to print and record the log.')
-    parser.add_argument('--val_step', default=5000, type=int,
+    parser.add_argument('--val_step', default=50000, type=int,
                         help='Number of steps to run validation.')
     parser.add_argument('--log_path', default='runs/runX',
                         help='Path to save the model and Tensorboard log.')

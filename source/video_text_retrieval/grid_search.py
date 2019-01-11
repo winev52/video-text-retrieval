@@ -18,7 +18,7 @@ def main():
         'weight_decay': [0, *np.logspace(-8, -16, 3)],
         # 'word_dim': [50, 100, 200, 300],
         # 'word2vec_path': [""],
-        'embed_size': np.linspace(256, 1536, 6, dtype=int),
+        'embed_size': np.linspace(1024, 2048, 5, dtype=int),
         'learning_rate': np.logspace(-3, -7, 5, dtype=float)
     }
 

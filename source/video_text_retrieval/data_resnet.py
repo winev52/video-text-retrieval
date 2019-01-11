@@ -3,11 +3,6 @@ import torch.utils.data as data
 import numpy as np
 import os
 from constant import CONSTANT
-# import torchvision.transforms as transforms
-# import nltk
-# from PIL import Image
-# import json as jsonmod
-# import pickle
 
 
 class VTTDataset(data.Dataset):
@@ -20,16 +15,18 @@ class VTTDataset(data.Dataset):
     Provide text and video npy features, and return data based on caption's id
     """
 
-    def __init__(self, cap_pkl, vid_feature_dir):
-        data = np.load(cap_pkl)
-        path = os.path.join(vid_feature_dir, CONSTANT.resnet_path)
-        data = np.array([r for r in data if os.path.isfile(os.path.join(path, str(r[0]) + ".npy"))])
+    def __init__(self, data_dir=CONSTANT.data_path, np_cap=CONSTANT.cap_train_path,
+                resnet_path=CONSTANT.resnet_path):
+        data = np.load(os.path.join(data_dir, np_cap))
+        resnet_path = os.path.join(data_dir, resnet_path)
+
+        # check availability of feature files
+        data = np.array([r for r in data if os.path.isfile(os.path.join(resnet_path, str(r[0]) + ".npy"))])
 
         self.video_ids = data[:, 0]
         self.captions = [torch.from_numpy(x) for x in data[:, 1]]
 
-        # imfeat_file = os.path.join(feature_file, data_name)
-        self.vid_feat_dir = vid_feature_dir
+        self.resnet_path = resnet_path
 
     def __getitem__(self, index):
         """
@@ -38,12 +35,11 @@ class VTTDataset(data.Dataset):
         """
         caption = self.captions[index]
         video_id = self.video_ids[index]
-        vid_feat_dir = self.vid_feat_dir
+        
+        resnet_file = os.path.join(self.resnet_path, str(video_id) + ".npy")
+        resnet_feature = torch.from_numpy(np.load(resnet_file))
 
-        path = os.path.join(vid_feat_dir, CONSTANT.resnet_path, str(video_id) + ".npy")
-        video_feat = torch.from_numpy(np.load(path))
-
-        return video_feat, caption, index, video_id
+        return resnet_feature, caption, index, video_id
 
     def __len__(self):
         return len(self.captions)
@@ -78,8 +74,8 @@ def collate_fn(data):
     return images, targets, lengths, ids
 
 
-def get_vtt_loader(cap_pkl, feature, batch_size=100, shuffle=True, num_workers=2, drop_last=False):
-    v2t = VTTDataset(cap_pkl, feature)
+def get_vtt_loader(np_cap, batch_size=100, shuffle=True, num_workers=2, drop_last=False):
+    v2t = VTTDataset(np_cap=np_cap)
     data_loader = torch.utils.data.DataLoader(
         dataset=v2t,
         batch_size=batch_size,
@@ -93,25 +89,19 @@ def get_vtt_loader(cap_pkl, feature, batch_size=100, shuffle=True, num_workers=2
 
 
 def get_loaders():
-    dpath = CONSTANT.data_path
-    train_caption_pkl_path = os.path.join(dpath, CONSTANT.cap_train_path)
-    val_caption_pkl_path = os.path.join(dpath, CONSTANT.cap_val_path)
     train_loader = get_vtt_loader(
-        train_caption_pkl_path, dpath, CONSTANT.batch_size, True, CONSTANT.workers, drop_last=True
+        CONSTANT.cap_train_path, CONSTANT.batch_size, True, CONSTANT.workers, drop_last=True
     )
     val_loader = get_vtt_loader(
-        val_caption_pkl_path, dpath, CONSTANT.batch_size, False, CONSTANT.workers
+        CONSTANT.cap_val_path, CONSTANT.batch_size, False, CONSTANT.workers
     )
 
     return train_loader, val_loader
 
 
 def get_test_loader():
-    dpath = CONSTANT.data_path
-
-    test_caption_pkl_path = os.path.join(dpath, CONSTANT.cap_test_path)
     test_loader = get_vtt_loader(
-        test_caption_pkl_path, dpath, CONSTANT.batch_size, True, CONSTANT.workers
+        CONSTANT.cap_test_path, CONSTANT.batch_size, True, CONSTANT.workers
     )
 
     return test_loader
