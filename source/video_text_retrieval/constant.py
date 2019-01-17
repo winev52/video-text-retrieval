@@ -76,6 +76,8 @@ def __parse_args():
                         help='Take the absolute value of embedding vectors.')
     parser.add_argument('--no_imgnorm', action='store_true',
                         help='Do not normalize the image embeddings.')
+    parser.add_argument('--dropout', default=0.25, type=float,
+                        help='dropout probality on before last layer.')
     return parser.parse_args()
 
 CONSTANT = __parse_args()

@@ -21,23 +21,25 @@ def l2norm(X):
 # We consider Image feature is precomputed
 class EncoderImage(nn.Module):
 
-    def __init__(self, input_dim, embed_size, use_abs=False, no_imgnorm=False):
+    def __init__(self, input_dim, embed_size, use_abs=False, no_imgnorm=False, dropout=0.5):
         super(EncoderImage, self).__init__()
         self.embed_size = embed_size
         self.no_imgnorm = no_imgnorm
         self.use_abs = use_abs
 
-        self.dropout = nn.Dropout(p=0.25)
+        if dropout != 0:
+            self.dropout = nn.Dropout(p=0.25)
+
         self.fc1 = nn.Linear(input_dim, embed_size)
         # self.a1 = nn.LeakyReLU()
         # self.fc2 = nn.Linear(embed_size*2, embed_size)
 
         # self.init_weights()
 
-    def init_weights(self):
-        """Xavier initialization for the fully connected layer
-        """
-        pass
+    # def init_weights(self):
+    #     """Xavier initialization for the fully connected layer
+    #     """
+    #     pass
         # r = np.sqrt(6.) / np.sqrt(self.fc1.in_features +
         #                           self.fc1.out_features)
         # self.fc1.weight.data.uniform_(-r, r)
@@ -53,7 +55,8 @@ class EncoderImage(nn.Module):
         """Extract image feature vectors."""
         # assuming that the precomputed features are already l2-normalized
 
-        features = self.dropout(images)
+        if hasattr(self, 'dropout'):
+            features = self.dropout(images)
         features = self.fc1(features)
         # features = self.a1(features)
         # features = self.fc2(features)
@@ -102,8 +105,8 @@ class EncoderText(nn.Module):
 
         # self.init_weights()
 
-    def init_weights(self):
-        pass
+    # def init_weights(self):
+    #     pass
         # self.embed.weight.data.uniform_(-0.1, 0.1)
 
         # r = np.sqrt(6.) / np.sqrt(self.fc.in_features +
