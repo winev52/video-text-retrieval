@@ -273,7 +273,8 @@ class VSE(object):
         self.grad_clip = opt.grad_clip
         self.img_enc = EncoderImage(opt.input_dim, opt.embed_size,
                                     use_abs=opt.use_abs,
-                                    no_imgnorm=opt.no_imgnorm)
+                                    no_imgnorm=opt.no_imgnorm,
+                                    dropout=opt.dropout)
         self.txt_enc = EncoderText(opt.vocab_size, opt.word_dim,
                                    opt.embed_size, opt.num_layers,
                                    use_abs=opt.use_abs,

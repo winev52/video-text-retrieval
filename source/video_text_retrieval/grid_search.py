@@ -15,7 +15,8 @@ def main():
     params = {
         'cpv': [20],
         'margin': np.linspace(0.2, 1, 5),
-        'weight_decay': [0, *np.logspace(-8, -16, 3)],
+        'dropout': [0.1, 0.25, 0.5],
+        # 'weight_decay': [0, *np.logspace(-8, -16, 3)],
         # 'word_dim': [50, 100, 200, 300],
         # 'word2vec_path': [""],
         'embed_size': np.linspace(1024, 2048, 5, dtype=int),
@@ -27,13 +28,14 @@ def main():
     for p in product_dict(**params):
         CONSTANT.cpv = p['cpv']
         CONSTANT.margin = p['margin'].item()
-        CONSTANT.weight_decay = p['weight_decay']
+        # CONSTANT.weight_decay = p['weight_decay']
+        CONSTANT.dropout = p['dropout']
         CONSTANT.embed_size = p['embed_size'].item()
         CONSTANT.learning_rate = p['learning_rate'].item()
         
         log_path =  os.path.join(o_log_path,
-                    '{}cpv{}m{:.1f}wc{}wd100es{}lr{}'.format(CONSTANT.model, 
-                    CONSTANT.cpv, CONSTANT.margin, CONSTANT.weight_decay, 
+                    '{}cpv{}m{:.1f}d{}wd100es{}lr{}'.format(CONSTANT.model, 
+                    CONSTANT.cpv, CONSTANT.margin, CONSTANT.dropout, 
                     CONSTANT.embed_size, CONSTANT.learning_rate))
 
         # if the config is run, ignore it
