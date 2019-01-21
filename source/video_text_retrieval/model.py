@@ -51,12 +51,12 @@ class EncoderImage(nn.Module):
         # self.fc2.weight.data.uniform_(-r, r)
         # self.fc2.bias.data.fill_(0)
 
-    def forward(self, images):
+    def forward(self, features):
         """Extract image feature vectors."""
         # assuming that the precomputed features are already l2-normalized
 
         if hasattr(self, 'dropout'):
-            features = self.dropout(images)
+            features = self.dropout(features)
         features = self.fc1(features)
         # features = self.a1(features)
         # features = self.fc2(features)
