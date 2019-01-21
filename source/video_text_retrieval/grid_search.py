@@ -15,7 +15,7 @@ def main():
     params = {
         'cpv': [20],
         'margin': np.linspace(0.2, 1, 5),
-        'dropout': [0.1, 0.25, 0.5],
+        'dropout': [0.0, 0.1, 0.25, 0.5],
         # 'weight_decay': [0, *np.logspace(-8, -16, 3)],
         # 'word_dim': [50, 100, 200, 300],
         # 'word2vec_path': [""],
