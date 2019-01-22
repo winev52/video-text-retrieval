@@ -24,7 +24,6 @@ class VTTDataset(data.Dataset):
         data = np.load(os.path.join(data_dir, np_cap))
         rgbi3d_path = os.path.join(data_dir, rgbi3d_path)
         soundnet_path = os.path.join(data_dir, soundnet_path)
-        flowi3d_path = os.path.join(data_dir, flowi3d_path)
 
         # check availability of feature files
         data = np.array([r for r in data if os.path.isfile(os.path.join(rgbi3d_path, str(r[0]) + ".npy"))])
@@ -34,7 +33,9 @@ class VTTDataset(data.Dataset):
 
         self.rgbi3d_path = rgbi3d_path
         self.soundnet_path = soundnet_path
-        self.flowi3d_path = flowi3d_path
+        if flowi3d_path:
+            flowi3d_path = os.path.join(data_dir, flowi3d_path)
+            self.flowi3d_path = flowi3d_path
 
     def __getitem__(self, index):
         """
