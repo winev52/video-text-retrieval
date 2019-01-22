@@ -60,7 +60,7 @@ class VTTDataset(data.Dataset):
         features.append(soundnet_feature)
 
         # flow i3d feature
-        if isinstance(self.flowi3d_path, str):
+        if hasattr(self, 'flowi3d_path'):
             flowi3d_file = os.path.join(self.flowi3d_path, str(video_id) + ".npy")
             flowi3d_feature = torch.from_numpy(np.load(flowi3d_file))
             features.append(flowi3d_feature)
