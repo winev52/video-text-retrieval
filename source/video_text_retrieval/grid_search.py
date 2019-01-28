@@ -20,7 +20,7 @@ def main():
         # 'word_dim': [50, 100, 200, 300],
         # 'word2vec_path': [""],
         'embed_size': np.linspace(1024, 2048, 5, dtype=int),
-        'learning_rate': np.logspace(-3, -7, 5, dtype=float)
+        'learning_rate': [1e-4] #np.logspace(-3, -7, 5, dtype=float)
     }
 
     o_log_path = CONSTANT.log_path

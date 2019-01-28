@@ -125,3 +125,10 @@ dmypy.json
 # Pyre type checker
 .pyre/
 data/glove.twitter.27B.zip
+d/
+es/
+glove/
+lr/
+m/
+nn/
+wc/
