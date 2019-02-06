@@ -241,7 +241,8 @@ def _read_opticalflow_function(video_id):
     # get total frames
     total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
     # setup optical flow calculator
-    of = cv2.optflow.createOptFlow_PCAFlow()
+    # of = cv2.optflow.createOptFlow_PCAFlow()
+    of = cv2.createOptFlow_DualTVL1()
 
     # differ from normal video,  need 2 frames to form a flow
     # if total frames is less than desired, loop the video

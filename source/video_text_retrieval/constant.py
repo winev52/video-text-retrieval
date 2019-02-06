@@ -10,6 +10,8 @@ def __parse_args():
                         help='path to resnet model for test')
     parser.add_argument('--model_path2', default='', type=str,
                         help='path to i3d audio model for test')
+    parser.add_argument('--model_path3', default=None, type=str,
+                        help='path to third model')
     parser.add_argument('--cpv', default=20, type=int,
                         help='the number of captions per video')
     parser.add_argument('--data_path', default='../../data',
